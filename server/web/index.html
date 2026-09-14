@@ -369,6 +369,7 @@
     }).then(res => { if (!res.ok) throw new Error('speak failed'); return res.blob(); })
       .then(blob => URL.createObjectURL(blob));
     prefetch.set(i, p);
+    p.catch(() => prefetch.delete(i));
     return p;
   }
 
@@ -376,6 +377,7 @@
 
   function setIdleUI() {
     playToken++;
+    consecutiveFailures = 0;
     playing = false; paused = false;
     playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Play';
     playBtn.setAttribute('aria-pressed', 'false');
@@ -391,6 +393,8 @@
     prefetch.clear();
   }
 
+  let consecutiveFailures = 0;
+
   async function playChunk(i) {
     if (!playing) return;
     if (i >= chunks.length) { setIdleUI(); return; }
@@ -404,10 +408,17 @@
     let url;
     try {
       url = await fetchChunkAudio(i);
+      consecutiveFailures = 0;
     } catch (e) {
       if (token !== playToken) return;
-      statusText.textContent = 'Voice service error — try again';
-      setIdleUI();
+      consecutiveFailures++;
+      if (consecutiveFailures >= 5) {
+        statusText.textContent = 'Voice service unavailable — try again in a moment';
+        setIdleUI();
+        return;
+      }
+      statusText.textContent = 'Skipped a line that failed to load…';
+      playChunk(i + 1);
       return;
     }
     if (!playing || token !== playToken) return;

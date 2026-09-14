@@ -1,3 +1,4 @@
+import asyncio
 import io
 from pathlib import Path
 
@@ -52,7 +53,7 @@ async def speak(req: SpeakRequest):
 
     audio_bytes = b""
     last_error = None
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             communicate = edge_tts.Communicate(text, VOICES[req.voice]["id"])
             buf = io.BytesIO()
@@ -64,6 +65,8 @@ async def speak(req: SpeakRequest):
                 break
         except Exception as e:
             last_error = e
+        if attempt < 4:
+            await asyncio.sleep(0.5 * (attempt + 1))
     if not audio_bytes:
         raise HTTPException(502, f"Voice service unavailable: {last_error}")
 
