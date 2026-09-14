@@ -98,7 +98,9 @@
   #playBtn:hover { filter: brightness(1.06); }
   #stopBtn { background: transparent; color: var(--ink); border-color: var(--border); }
   #stopBtn:hover { background: var(--surface); }
-  #stopBtn:disabled, #playBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+  #stopBtn:disabled, #playBtn:disabled, .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .icon-btn { background: transparent; color: var(--ink-soft); border-color: var(--border); padding: 0.6rem; }
+  .icon-btn:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
   .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); flex: none; }
   .status.playing { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
@@ -106,8 +108,15 @@
   .status.busy .dot { background: var(--accent); animation: pulse 0.6s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
   @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.5; } }
-  .progress-track { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
-  .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
+  .progress-wrap { padding: 9px 0; cursor: pointer; touch-action: none; }
+  .progress-track { position: relative; height: 4px; border-radius: 999px; background: var(--border); }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.15s ease; pointer-events: none; }
+  .progress-thumb {
+    position: absolute; top: 50%; left: 0%; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--surface-2);
+    transition: left 0.15s ease, opacity 0.15s ease; pointer-events: none; opacity: 0;
+  }
+  .progress-wrap:hover .progress-thumb, .progress-wrap.seeking .progress-thumb { opacity: 1; }
   footer { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .banner { display: none; font-size: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; color: var(--ink-soft); }
   .banner.show { display: block; }
@@ -155,9 +164,15 @@
     </div>
     <div class="dock-row">
       <div class="transport">
+        <button id="prevBtn" class="icon-btn" disabled aria-label="Previous sentence">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M12 2.3v11.4c0 .8-.9 1.3-1.6.9l-8-5.7a1 1 0 0 1 0-1.7l8-5.7c.7-.5 1.6 0 1.6.8z"/></svg>
+        </button>
         <button id="playBtn" aria-pressed="false" disabled>
           <span id="playIcon"></span>
           <span id="playLabel">Play</span>
+        </button>
+        <button id="nextBtn" class="icon-btn" disabled aria-label="Next sentence">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.3v11.4c0 .8.9 1.3 1.6.9l8-5.7a1 1 0 0 0 0-1.7l-8-5.7C4.9 1 4 1.5 4 2.3z"/></svg>
         </button>
         <button id="stopBtn" disabled>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
@@ -169,7 +184,12 @@
         <span id="statusText">Connecting…</span>
       </div>
     </div>
-    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-thumb" id="progressThumb"></div>
+      </div>
+    </div>
   </div>
 
   <footer>
@@ -191,9 +211,13 @@
   const playIcon = document.getElementById('playIcon');
   const playLabel = document.getElementById('playLabel');
   const stopBtn = document.getElementById('stopBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const statusPill = document.getElementById('statusPill');
   const statusText = document.getElementById('statusText');
+  const progressWrap = document.getElementById('progressWrap');
   const progressFill = document.getElementById('progressFill');
+  const progressThumb = document.getElementById('progressThumb');
   const wordCountEl = document.getElementById('wordCount');
   const timeEstimateEl = document.getElementById('timeEstimate');
   const loadingBanner = document.getElementById('loadingBanner');
@@ -304,8 +328,25 @@
   }
 
   function updateProgress() {
-    const pct = chunks.length ? Math.round((idx / chunks.length) * 100) : 0;
+    const denom = Math.max(1, chunks.length - 1);
+    const pct = chunks.length ? Math.round((idx / denom) * 100) : 0;
     progressFill.style.width = pct + '%';
+    progressThumb.style.left = pct + '%';
+  }
+
+  function updateSkipButtons() {
+    prevBtn.disabled = !chunks.length || idx <= 0;
+    nextBtn.disabled = !chunks.length || idx >= chunks.length - 1;
+  }
+
+  function ensureChunks() {
+    if (!chunks.length) {
+      if (!storyInput.value.trim()) return false;
+      chunks = buildChunks(storyInput.value);
+      if (!chunks.length) return false;
+      renderReadingView();
+    }
+    return true;
   }
 
   async function fetchChunkAudio(i) {
@@ -320,14 +361,19 @@
     return p;
   }
 
+  let playToken = 0;
+
   function setIdleUI() {
+    playToken++;
     playing = false; paused = false;
     playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Play';
     playBtn.setAttribute('aria-pressed', 'false');
     stopBtn.disabled = true;
+    prevBtn.disabled = true; nextBtn.disabled = true;
     statusPill.classList.remove('playing', 'busy');
     statusText.textContent = 'Ready';
     progressFill.style.width = '0%';
+    progressThumb.style.left = '0%';
     readingView.hidden = true;
     storyInput.hidden = false;
     if (audioEl) { audioEl.pause(); audioEl = null; }
@@ -337,29 +383,65 @@
   async function playChunk(i) {
     if (!playing) return;
     if (i >= chunks.length) { setIdleUI(); return; }
+    const token = ++playToken;
     idx = i;
     highlight(idx);
     updateProgress();
+    updateSkipButtons();
     statusPill.classList.add('busy');
     statusText.textContent = 'Generating…';
     let url;
     try {
       url = await fetchChunkAudio(i);
     } catch (e) {
+      if (token !== playToken) return;
       statusText.textContent = 'Voice service error — try again';
       setIdleUI();
       return;
     }
-    if (!playing) return;
+    if (!playing || token !== playToken) return;
     statusPill.classList.remove('busy');
     statusPill.classList.add('playing');
     statusText.textContent = 'Reading — sentence ' + (i + 1) + ' of ' + chunks.length;
+    if (audioEl) audioEl.pause();
     audioEl = new Audio(url);
     audioEl.playbackRate = parseFloat(rateInput.value);
-    audioEl.onended = () => { if (playing) playChunk(i + 1); };
+    audioEl.onended = () => { if (playing && token === playToken) playChunk(i + 1); };
     audioEl.play();
     if (i + 1 < chunks.length) fetchChunkAudio(i + 1).catch(() => {});
   }
+
+  function seekTo(i) {
+    if (!ensureChunks()) return;
+    i = Math.min(chunks.length - 1, Math.max(0, i));
+    if (audioEl) audioEl.pause();
+    playing = true; paused = false;
+    playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
+    playBtn.setAttribute('aria-pressed', 'true');
+    stopBtn.disabled = false;
+    storyInput.hidden = true; readingView.hidden = false;
+    playChunk(i);
+  }
+
+  function seekFromEvent(clientX) {
+    const rect = progressWrap.getBoundingClientRect();
+    const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    if (!ensureChunks()) return;
+    seekTo(Math.round(fraction * (chunks.length - 1)));
+  }
+
+  let dragging = false;
+  progressWrap.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    progressWrap.classList.add('seeking');
+    seekFromEvent(e.clientX);
+  });
+  window.addEventListener('pointermove', (e) => { if (dragging) seekFromEvent(e.clientX); });
+  window.addEventListener('pointerup', () => { dragging = false; progressWrap.classList.remove('seeking'); });
+  progressWrap.addEventListener('click', (e) => { if (!dragging) seekFromEvent(e.clientX); });
+
+  prevBtn.addEventListener('click', () => seekTo(idx - 1));
+  nextBtn.addEventListener('click', () => seekTo(idx + 1));
 
   async function startPlaying() {
     chunks = buildChunks(storyInput.value);
