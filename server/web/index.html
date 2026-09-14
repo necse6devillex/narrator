@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrator</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#13161C">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Narrator">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #EDE7DA;
+    --surface: #FBF8F1;
+    --surface-2: #F1ECDF;
+    --ink: #262019;
+    --ink-soft: #746B59;
+    --border: #DCD3BE;
+    --accent: #C2792C;
+    --on-accent: #2E1C08;
+    --shadow: 38 31 20;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #13161C;
+      --surface: #1B1F27;
+      --surface-2: #20242E;
+      --ink: #ECE6D6;
+      --ink-soft: #9B9484;
+      --border: #2C313C;
+      --accent: #E2A15C;
+      --on-accent: #241505;
+      --shadow: 0 0 0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Work Sans', system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  main { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 1.5rem; }
+  header { display: flex; flex-direction: column; gap: 0.4rem; }
+  .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.25rem; margin: 0; text-wrap: balance; }
+  .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.5; max-width: 46ch; }
+  .manuscript {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(var(--shadow) / 0.06), 0 8px 24px -12px rgba(var(--shadow) / 0.18);
+    overflow: hidden;
+  }
+  #storyInput {
+    display: block; width: 100%; min-height: 15rem; resize: vertical; border: 0;
+    padding: 1.5rem 1.5rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
+    line-height: 1.75; color: var(--ink); background: transparent;
+  }
+  #storyInput:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #readingView {
+    padding: 1.5rem 1.5rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
+    line-height: 1.75; max-height: 22rem; overflow-y: auto;
+  }
+  #readingView p { margin: 0 0 1.1em; text-wrap: pretty; }
+  #readingView p:last-child { margin-bottom: 0; }
+  .chunk { transition: background 0.2s ease, box-shadow 0.2s ease; border-radius: 3px; }
+  .chunk.active { background: color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent); }
+  .chunk.done { color: var(--ink-soft); }
+  .meta-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    padding: 0.7rem 1.5rem 0.9rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
+  }
+  .meta-row span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
+  .dock { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .dock-row { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 160px; }
+  .field label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+  select { font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.9375rem; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.7rem; max-width: 100%; }
+  select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rate-control { display: flex; align-items: center; gap: 0.6rem; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .rate-value { font-variant-numeric: tabular-nums; font-size: 0.875rem; min-width: 2.6em; text-align: right; }
+  .transport { display: flex; align-items: center; gap: 0.75rem; }
+  button { font: inherit; font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.9375rem; border-radius: 10px; padding: 0.7rem 1.3rem; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.08s ease, background 0.15s ease; }
+  button:active { transform: scale(0.97); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #playBtn { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  #playBtn:hover { filter: brightness(1.06); }
+  #stopBtn { background: transparent; color: var(--ink); border-color: var(--border); }
+  #stopBtn:hover { background: var(--surface); }
+  #stopBtn:disabled, #playBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); }
+  .status.playing { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .status.playing .dot { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+  .status.busy .dot { background: var(--accent); animation: pulse 0.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.5; } }
+  .progress-track { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s ease; }
+  .example-note { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.5; }
+  footer { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 1.1rem; }
+  .banner { display: none; font-size: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; color: var(--ink-soft); }
+  .banner.show { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">Read aloud · neural voices</span>
+    <h1>Narrator</h1>
+    <p class="sub">Paste a story and press play. Free neural voices, generated on the fly — no account, no per-use limit — reachable from any device on your home Wi-Fi while this PC is running the server.</p>
+  </header>
+
+  <div class="banner" id="loadingBanner">Connecting…</div>
+
+  <div class="manuscript">
+    <textarea id="storyInput" spellcheck="false"></textarea>
+    <div id="readingView" hidden aria-live="off"></div>
+    <div class="meta-row">
+      <span id="wordCount">0 words</span>
+      <span id="timeEstimate"></span>
+    </div>
+  </div>
+  <p class="example-note" id="exampleNote">Example above: the opening of <em>Alice's Adventures in Wonderland</em>. Clear it and paste your own story to begin.</p>
+
+  <div class="dock">
+    <div class="dock-row">
+      <div class="field">
+        <label for="voiceSelect">Voice</label>
+        <select id="voiceSelect"><option>Loading voices…</option></select>
+      </div>
+      <div class="field">
+        <label for="rateInput">Speed</label>
+        <div class="rate-control">
+          <input type="range" id="rateInput" min="0.7" max="1.6" step="0.1" value="1" />
+          <span class="rate-value" id="rateValue">1.0×</span>
+        </div>
+      </div>
+    </div>
+    <div class="dock-row">
+      <div class="transport">
+        <button id="playBtn" aria-pressed="false" disabled>
+          <span id="playIcon">▶</span>
+          <span id="playLabel">Play</span>
+        </button>
+        <button id="stopBtn" disabled>■ Stop</button>
+      </div>
+      <div class="status" id="statusPill">
+        <span class="dot"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <footer>
+    Voices generated by Microsoft's free neural text-to-speech service, served from this PC — open <span id="hostLabel">this address</span> on any device on the same Wi-Fi to use it. Keep this PC and server running while you listen.
+  </footer>
+</main>
+
+<script>
+  const SAMPLE_TEXT = "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, ‘and what is the use of a book,’ thought Alice, ‘without pictures or conversations?’\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.";
+
+  const storyInput = document.getElementById('storyInput');
+  const readingView = document.getElementById('readingView');
+  const exampleNote = document.getElementById('exampleNote');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const rateInput = document.getElementById('rateInput');
+  const rateValue = document.getElementById('rateValue');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const playLabel = document.getElementById('playLabel');
+  const stopBtn = document.getElementById('stopBtn');
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  const progressFill = document.getElementById('progressFill');
+  const wordCountEl = document.getElementById('wordCount');
+  const timeEstimateEl = document.getElementById('timeEstimate');
+  const loadingBanner = document.getElementById('loadingBanner');
+  const hostLabel = document.getElementById('hostLabel');
+
+  hostLabel.textContent = location.origin;
+
+  let chunks = [];
+  let idx = 0;
+  let playing = false;
+  let paused = false;
+  let audioEl = null;
+  let prefetch = new Map();
+
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  const savedText = safeGet('narrator.text');
+  if (savedText && savedText.trim()) {
+    storyInput.value = savedText;
+    exampleNote.hidden = true;
+  } else {
+    storyInput.value = SAMPLE_TEXT;
+  }
+
+  function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function wordsIn(text) { const m = text.trim().match(/\S+/g); return m ? m.length : 0; }
+
+  function updateMeta() {
+    const count = wordsIn(storyInput.value);
+    wordCountEl.textContent = count === 1 ? '1 word' : count + ' words';
+    const minutes = count / 140;
+    timeEstimateEl.textContent = count === 0 ? '' : (minutes < 1 ? 'under 1 min to listen' : '~' + Math.round(minutes) + ' min to listen');
+  }
+
+  let saveTimer;
+  storyInput.addEventListener('input', () => {
+    exampleNote.hidden = true;
+    updateMeta();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => safeSet('narrator.text', storyInput.value), 400);
+  });
+
+  const savedRate = safeGet('narrator.rate');
+  if (savedRate) rateInput.value = savedRate;
+  rateValue.textContent = parseFloat(rateInput.value).toFixed(1) + '×';
+  rateInput.addEventListener('input', () => {
+    rateValue.textContent = parseFloat(rateInput.value).toFixed(1) + '×';
+    safeSet('narrator.rate', rateInput.value);
+    if (audioEl) audioEl.playbackRate = parseFloat(rateInput.value);
+  });
+
+  async function loadVoices() {
+    const res = await fetch('/api/voices');
+    const voices = await res.json();
+    const savedVoice = safeGet('narrator.voice');
+    voiceSelect.innerHTML = '';
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = v.label;
+      voiceSelect.appendChild(opt);
+    });
+    if (savedVoice && voices.some(v => v.id === savedVoice)) voiceSelect.value = savedVoice;
+    else if (voices.some(v => v.id === 'Ryan')) voiceSelect.value = 'Ryan';
+  }
+  voiceSelect.addEventListener('change', () => safeSet('narrator.voice', voiceSelect.value));
+
+  async function waitForModel() {
+    while (true) {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        if (data.ready) return;
+      } catch (e) {}
+      loadingBanner.classList.add('show');
+      statusText.textContent = 'Model loading…';
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  function buildChunks(raw) {
+    const paragraphs = raw.split(/\n+/).map(p => p.trim()).filter(Boolean);
+    const result = [];
+    paragraphs.forEach((para, pIdx) => {
+      const sentences = para.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || [para];
+      sentences.forEach(raw => {
+        let s = raw.trim();
+        if (!s) return;
+        if (s.length <= 220) { result.push({ text: s, para: pIdx }); return; }
+        const words = s.split(' ');
+        let cur = '';
+        words.forEach(w => {
+          if ((cur + ' ' + w).trim().length > 200) { result.push({ text: cur.trim(), para: pIdx }); cur = w; }
+          else { cur = (cur + ' ' + w).trim(); }
+        });
+        if (cur) result.push({ text: cur.trim(), para: pIdx });
+      });
+    });
+    return result;
+  }
+
+  function renderReadingView() {
+    let html = ''; let lastPara = -1;
+    chunks.forEach((c, i) => {
+      if (c.para !== lastPara) { if (lastPara !== -1) html += '</p>'; html += '<p>'; lastPara = c.para; }
+      html += '<span class="chunk" id="chunk-' + i + '">' + escapeHtml(c.text) + ' </span>';
+    });
+    html += '</p>';
+    readingView.innerHTML = html;
+  }
+
+  function highlight(i) {
+    const prevActive = readingView.querySelector('.chunk.active');
+    if (prevActive) { prevActive.classList.remove('active'); prevActive.classList.add('done'); }
+    const el = document.getElementById('chunk-' + i);
+    if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+
+  function updateProgress() {
+    const pct = chunks.length ? Math.round((idx / chunks.length) * 100) : 0;
+    progressFill.style.width = pct + '%';
+  }
+
+  async function fetchChunkAudio(i) {
+    if (prefetch.has(i)) return prefetch.get(i);
+    const p = fetch('/api/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: chunks[i].text, voice: voiceSelect.value })
+    }).then(res => { if (!res.ok) throw new Error('speak failed'); return res.blob(); })
+      .then(blob => URL.createObjectURL(blob));
+    prefetch.set(i, p);
+    return p;
+  }
+
+  function setIdleUI() {
+    playing = false; paused = false;
+    playIcon.textContent = '▶'; playLabel.textContent = 'Play';
+    playBtn.setAttribute('aria-pressed', 'false');
+    stopBtn.disabled = true;
+    statusPill.classList.remove('playing', 'busy');
+    statusText.textContent = 'Ready';
+    progressFill.style.width = '0%';
+    readingView.hidden = true;
+    storyInput.hidden = false;
+    if (audioEl) { audioEl.pause(); audioEl = null; }
+    prefetch.clear();
+  }
+
+  async function playChunk(i) {
+    if (!playing) return;
+    if (i >= chunks.length) { setIdleUI(); return; }
+    idx = i;
+    highlight(idx);
+    updateProgress();
+    statusPill.classList.add('busy');
+    statusText.textContent = 'Generating…';
+    let url;
+    try {
+      url = await fetchChunkAudio(i);
+    } catch (e) {
+      statusText.textContent = 'Voice server error — check the PC is running';
+      setIdleUI();
+      return;
+    }
+    if (!playing) return;
+    statusPill.classList.remove('busy');
+    statusPill.classList.add('playing');
+    statusText.textContent = 'Reading — sentence ' + (i + 1) + ' of ' + chunks.length;
+    audioEl = new Audio(url);
+    audioEl.playbackRate = parseFloat(rateInput.value);
+    audioEl.onended = () => { if (playing) playChunk(i + 1); };
+    audioEl.play();
+    if (i + 1 < chunks.length) fetchChunkAudio(i + 1).catch(() => {});
+  }
+
+  async function startPlaying() {
+    chunks = buildChunks(storyInput.value);
+    if (!chunks.length) return;
+    renderReadingView();
+    storyInput.hidden = true;
+    readingView.hidden = false;
+    playing = true; paused = false;
+    playIcon.textContent = '❚❚'; playLabel.textContent = 'Pause';
+    playBtn.setAttribute('aria-pressed', 'true');
+    stopBtn.disabled = false;
+    playChunk(0);
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (!playing) { startPlaying(); }
+    else if (!paused && audioEl) {
+      audioEl.pause(); paused = true;
+      playIcon.textContent = '▶'; playLabel.textContent = 'Resume';
+      statusPill.classList.remove('playing');
+      statusText.textContent = 'Paused';
+    } else if (audioEl) {
+      audioEl.play(); paused = false;
+      playIcon.textContent = '❚❚'; playLabel.textContent = 'Pause';
+      statusPill.classList.add('playing');
+      statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
+    }
+  });
+
+  stopBtn.addEventListener('click', setIdleUI);
+
+  (async function init() {
+    updateMeta();
+    await loadVoices();
+    await waitForModel();
+    loadingBanner.classList.remove('show');
+    playBtn.disabled = false;
+    statusText.textContent = 'Ready';
+  })();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
