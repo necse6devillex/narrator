@@ -20,6 +20,7 @@
     --surface-2: #F1ECDF;
     --ink: #262019;
     --ink-soft: #746B59;
+    --ink-faint: #A79B85;
     --border: #DCD3BE;
     --accent: #C2792C;
     --on-accent: #2E1C08;
@@ -32,6 +33,7 @@
       --surface-2: #20242E;
       --ink: #ECE6D6;
       --ink-soft: #9B9484;
+      --ink-faint: #5F6672;
       --border: #2C313C;
       --accent: #E2A15C;
       --on-accent: #241505;
@@ -49,25 +51,28 @@
     padding: 2.5rem 1.25rem 4rem;
   }
   main { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 1.5rem; }
-  header { display: flex; flex-direction: column; gap: 0.4rem; }
+  header { display: flex; flex-direction: column; gap: 0.5rem; }
+  .brand { display: flex; align-items: center; gap: 0.6rem; }
+  .brand svg { flex: none; color: var(--accent); }
   .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
-  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.25rem; margin: 0; text-wrap: balance; }
-  .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.5; max-width: 46ch; }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.25rem; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.55; max-width: 48ch; }
   .manuscript {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 1px 2px rgba(var(--shadow) / 0.06), 0 8px 24px -12px rgba(var(--shadow) / 0.18);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(var(--shadow) / 0.05), 0 10px 28px -14px rgba(var(--shadow) / 0.22);
     overflow: hidden;
   }
   #storyInput {
     display: block; width: 100%; min-height: 15rem; resize: vertical; border: 0;
-    padding: 1.5rem 1.5rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
+    padding: 1.6rem 1.6rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
     line-height: 1.75; color: var(--ink); background: transparent;
   }
+  #storyInput::placeholder { color: var(--ink-faint); font-style: italic; }
   #storyInput:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   #readingView {
-    padding: 1.5rem 1.5rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
+    padding: 1.6rem 1.6rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
     line-height: 1.75; max-height: 22rem; overflow-y: auto;
   }
   #readingView p { margin: 0 0 1.1em; text-wrap: pretty; }
@@ -77,12 +82,21 @@
   .chunk.done { color: var(--ink-soft); }
   .meta-row {
     display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-    padding: 0.7rem 1.5rem 0.9rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
+    padding: 0.7rem 1.1rem 0.9rem 1.6rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
   }
-  .meta-row span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
-  .dock { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .meta-row .meta-text { display: flex; gap: 0.6rem; align-items: baseline; font-variant-numeric: tabular-nums; }
+  .meta-row .meta-text span:last-child:not(:empty)::before { content: '·'; margin-right: 0.6rem; }
+  .ghost-btn {
+    font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.8125rem; font-weight: 600;
+    color: var(--ink-soft); background: none; border: 0; padding: 0.3rem 0.5rem; cursor: pointer; border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .ghost-btn:hover { color: var(--ink); background: var(--surface-2); }
+  .ghost-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .dock { background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1.1rem; }
   .dock-row { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
-  .field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 160px; }
+  .dock-row + .dock-row { padding-top: 1rem; border-top: 1px solid var(--border); }
+  .field { display: flex; flex-direction: column; gap: 0.35rem; flex: 1 1 160px; }
   .field label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
   select { font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.9375rem; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.7rem; max-width: 100%; }
   select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -90,7 +104,8 @@
   input[type="range"] { flex: 1; accent-color: var(--accent); }
   .rate-value { font-variant-numeric: tabular-nums; font-size: 0.875rem; min-width: 2.6em; text-align: right; }
   .transport { display: flex; align-items: center; gap: 0.75rem; }
-  button { font: inherit; font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.9375rem; border-radius: 10px; padding: 0.7rem 1.3rem; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.08s ease, background 0.15s ease; }
+  button { font: inherit; font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.9375rem; border-radius: 10px; padding: 0.7rem 1.3rem; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.08s ease, background 0.15s ease, filter 0.15s ease; }
+  button svg { flex: none; }
   button:active { transform: scale(0.97); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #playBtn { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -99,15 +114,14 @@
   #stopBtn:hover { background: var(--surface); }
   #stopBtn:disabled, #playBtn:disabled { opacity: 0.45; cursor: not-allowed; }
   .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); flex: none; }
   .status.playing { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
   .status.playing .dot { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
   .status.busy .dot { background: var(--accent); animation: pulse 0.6s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
   @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.5; } }
   .progress-track { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
-  .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s ease; }
-  .example-note { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.5; }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
   footer { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .banner { display: none; font-size: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; color: var(--ink-soft); }
   .banner.show { display: block; }
@@ -116,22 +130,28 @@
 <body>
 <main>
   <header>
-    <span class="eyebrow">Read aloud · neural voices</span>
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9.5v5h3.6l4.9 4.2V5.3L6.6 9.5H3z" fill="currentColor"/>
+        <path d="M15.8 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18.3 5.3a9 9 0 0 1 0 13.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+      </svg>
+      <span class="eyebrow">Read aloud · neural voices</span>
+    </div>
     <h1>Narrator</h1>
-    <p class="sub">Paste a story and press play. Free neural voices, generated on the fly — no account, no per-use limit — reachable from any device on your home Wi-Fi while this PC is running the server.</p>
+    <p class="sub">Paste anything and press play. Free neural voices, generated on the fly — works from any device, anywhere, no account needed.</p>
   </header>
 
   <div class="banner" id="loadingBanner">Connecting…</div>
 
   <div class="manuscript">
-    <textarea id="storyInput" spellcheck="false"></textarea>
+    <textarea id="storyInput" spellcheck="false" placeholder="Paste your story here, then press play…"></textarea>
     <div id="readingView" hidden aria-live="off"></div>
     <div class="meta-row">
-      <span id="wordCount">0 words</span>
-      <span id="timeEstimate"></span>
+      <span class="meta-text"><span id="wordCount">0 words</span><span id="timeEstimate"></span></span>
+      <button class="ghost-btn" id="clearBtn" type="button">Clear</button>
     </div>
   </div>
-  <p class="example-note" id="exampleNote">Example above: the opening of <em>Alice's Adventures in Wonderland</em>. Clear it and paste your own story to begin.</p>
 
   <div class="dock">
     <div class="dock-row">
@@ -150,10 +170,13 @@
     <div class="dock-row">
       <div class="transport">
         <button id="playBtn" aria-pressed="false" disabled>
-          <span id="playIcon">▶</span>
+          <span id="playIcon"></span>
           <span id="playLabel">Play</span>
         </button>
-        <button id="stopBtn" disabled>■ Stop</button>
+        <button id="stopBtn" disabled>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
+          Stop
+        </button>
       </div>
       <div class="status" id="statusPill">
         <span class="dot"></span>
@@ -164,16 +187,17 @@
   </div>
 
   <footer>
-    Voices generated by Microsoft's free neural text-to-speech service, served from this PC — open <span id="hostLabel">this address</span> on any device on the same Wi-Fi to use it. Keep this PC and server running while you listen.
+    Runs in the cloud, so it works from anywhere. If it's been idle a while, the first line may take up to a minute to wake up — after that it's quick.
   </footer>
 </main>
 
 <script>
-  const SAMPLE_TEXT = "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, ‘and what is the use of a book,’ thought Alice, ‘without pictures or conversations?’\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.";
+  const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.3v11.4c0 .8.9 1.3 1.6.9l9-5.7a1 1 0 0 0 0-1.7l-9-5.7C4.9 1 4 1.5 4 2.3z"/></svg>';
+  const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>';
 
   const storyInput = document.getElementById('storyInput');
   const readingView = document.getElementById('readingView');
-  const exampleNote = document.getElementById('exampleNote');
+  const clearBtn = document.getElementById('clearBtn');
   const voiceSelect = document.getElementById('voiceSelect');
   const rateInput = document.getElementById('rateInput');
   const rateValue = document.getElementById('rateValue');
@@ -187,9 +211,8 @@
   const wordCountEl = document.getElementById('wordCount');
   const timeEstimateEl = document.getElementById('timeEstimate');
   const loadingBanner = document.getElementById('loadingBanner');
-  const hostLabel = document.getElementById('hostLabel');
 
-  hostLabel.textContent = location.origin;
+  playIcon.innerHTML = ICON_PLAY;
 
   let chunks = [];
   let idx = 0;
@@ -201,14 +224,6 @@
   function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
-  const savedText = safeGet('narrator.text');
-  if (savedText && savedText.trim()) {
-    storyInput.value = savedText;
-    exampleNote.hidden = true;
-  } else {
-    storyInput.value = SAMPLE_TEXT;
-  }
-
   function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function wordsIn(text) { const m = text.trim().match(/\S+/g); return m ? m.length : 0; }
 
@@ -219,12 +234,11 @@
     timeEstimateEl.textContent = count === 0 ? '' : (minutes < 1 ? 'under 1 min to listen' : '~' + Math.round(minutes) + ' min to listen');
   }
 
-  let saveTimer;
-  storyInput.addEventListener('input', () => {
-    exampleNote.hidden = true;
+  storyInput.addEventListener('input', updateMeta);
+  clearBtn.addEventListener('click', () => {
+    storyInput.value = '';
     updateMeta();
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => safeSet('narrator.text', storyInput.value), 400);
+    storyInput.focus();
   });
 
   const savedRate = safeGet('narrator.rate');
@@ -260,7 +274,7 @@
         if (data.ready) return;
       } catch (e) {}
       loadingBanner.classList.add('show');
-      statusText.textContent = 'Model loading…';
+      statusText.textContent = 'Waking up…';
       await new Promise(r => setTimeout(r, 2000));
     }
   }
@@ -322,7 +336,7 @@
 
   function setIdleUI() {
     playing = false; paused = false;
-    playIcon.textContent = '▶'; playLabel.textContent = 'Play';
+    playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Play';
     playBtn.setAttribute('aria-pressed', 'false');
     stopBtn.disabled = true;
     statusPill.classList.remove('playing', 'busy');
@@ -346,7 +360,7 @@
     try {
       url = await fetchChunkAudio(i);
     } catch (e) {
-      statusText.textContent = 'Voice server error — check the PC is running';
+      statusText.textContent = 'Voice service error — try again';
       setIdleUI();
       return;
     }
@@ -368,7 +382,7 @@
     storyInput.hidden = true;
     readingView.hidden = false;
     playing = true; paused = false;
-    playIcon.textContent = '❚❚'; playLabel.textContent = 'Pause';
+    playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
     playBtn.setAttribute('aria-pressed', 'true');
     stopBtn.disabled = false;
     playChunk(0);
@@ -378,12 +392,12 @@
     if (!playing) { startPlaying(); }
     else if (!paused && audioEl) {
       audioEl.pause(); paused = true;
-      playIcon.textContent = '▶'; playLabel.textContent = 'Resume';
+      playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Resume';
       statusPill.classList.remove('playing');
       statusText.textContent = 'Paused';
     } else if (audioEl) {
       audioEl.play(); paused = false;
-      playIcon.textContent = '❚❚'; playLabel.textContent = 'Pause';
+      playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
       statusPill.classList.add('playing');
       statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
     }
