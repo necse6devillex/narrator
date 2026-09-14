@@ -304,10 +304,11 @@
     const paragraphs = raw.split(/\n+/).map(p => p.trim()).filter(Boolean);
     const result = [];
     paragraphs.forEach((para, pIdx) => {
-      const sentences = para.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || [para];
+      const sentences = para.match(/[^.!?]+[.!?]+[)\]"'’”»›]*(?=\s|$)|[^.!?]+$/g) || [para];
       sentences.forEach(raw => {
-        let s = raw.trim();
+        let s = raw.replace(/[*_~`^]+/g, '').replace(/\s+/g, ' ').trim();
         if (!s) return;
+        if (!/[\p{L}\p{N}]/u.test(s)) return;
         if (s.length <= 220) { result.push({ text: s, para: pIdx }); return; }
         const words = s.split(' ');
         let cur = '';
@@ -391,6 +392,7 @@
     storyInput.hidden = false;
     if (audioEl) { audioEl.pause(); audioEl = null; }
     prefetch.clear();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
   }
 
   let consecutiveFailures = 0;
@@ -430,7 +432,21 @@
     audioEl.playbackRate = parseFloat(rateInput.value);
     audioEl.onended = () => { if (playing && token === playToken) playChunk(i + 1); };
     audioEl.play();
-    if (i + 1 < chunks.length) fetchChunkAudio(i + 1).catch(() => {});
+    updateMediaSession('playing');
+    for (let j = i + 1; j <= i + 3 && j < chunks.length; j++) {
+      fetchChunkAudio(j).catch(() => {});
+    }
+  }
+
+  function updateMediaSession(state) {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Sentence ' + (idx + 1) + ' of ' + chunks.length,
+        artist: 'Narrator',
+      });
+      navigator.mediaSession.playbackState = state;
+    } catch (e) {}
   }
 
   function seekTo(i) {
@@ -485,15 +501,25 @@
       playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Resume';
       statusPill.classList.remove('playing');
       statusText.textContent = 'Paused';
+      updateMediaSession('paused');
     } else if (audioEl) {
       audioEl.play(); paused = false;
       playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
       statusPill.classList.add('playing');
       statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
+      updateMediaSession('playing');
     }
   });
 
   stopBtn.addEventListener('click', setIdleUI);
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => playBtn.click());
+    navigator.mediaSession.setActionHandler('pause', () => playBtn.click());
+    navigator.mediaSession.setActionHandler('previoustrack', () => seekTo(idx - 1));
+    navigator.mediaSession.setActionHandler('nexttrack', () => seekTo(idx + 1));
+    navigator.mediaSession.setActionHandler('stop', () => setIdleUI());
+  }
 
   (async function init() {
     updateMeta();
