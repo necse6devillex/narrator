@@ -5,6 +5,7 @@ from pathlib import Path
 import edge_tts
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 VOICES = {
@@ -91,6 +92,14 @@ def index():
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(WEB_DIR / "manifest.json", media_type="application/manifest+json")
+
+
+@app.get("/extract.js")
+def extract_js():
+    return FileResponse(WEB_DIR / "extract.js", media_type="application/javascript", headers={"Cache-Control": "no-store"})
+
+
+app.mount("/vendor", StaticFiles(directory=WEB_DIR / "vendor"), name="vendor")
 
 
 @app.get("/sw.js")

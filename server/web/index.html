@@ -24,6 +24,7 @@
     --border: #2C313C;
     --accent: #E2A15C;
     --on-accent: #241505;
+    --warn: #E8957F;
     --shadow: 0 0 0;
   }
   * { box-sizing: border-box; }
@@ -41,15 +42,18 @@
   .brand { display: flex; align-items: center; gap: 0.6rem; }
   .brand svg { flex: none; color: var(--accent); }
   .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .offline-pill { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 0.2rem 0.65rem; }
   h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.25rem; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-  .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.55; max-width: 48ch; }
+  .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.55; max-width: 48ch; margin: 0; }
   .manuscript {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     box-shadow: 0 1px 2px rgba(var(--shadow) / 0.05), 0 10px 28px -14px rgba(var(--shadow) / 0.22);
     overflow: hidden;
+    transition: border-color 0.15s ease;
   }
+  .manuscript.dragover { border-color: var(--accent); }
   #storyInput {
     display: block; width: 100%; min-height: 15rem; resize: vertical; border: 0;
     padding: 1.6rem 1.6rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
@@ -67,18 +71,39 @@
   .chunk.active { background: color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent); }
   .chunk.done { color: var(--ink-soft); }
   .meta-row {
-    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-    padding: 0.7rem 1.1rem 0.9rem 1.6rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
+    display: flex; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap;
+    padding: 0.55rem 0.8rem 0.65rem 1.6rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
   }
   .meta-row .meta-text { display: flex; gap: 0.6rem; align-items: baseline; font-variant-numeric: tabular-nums; }
   .meta-row .meta-text span:last-child:not(:empty)::before { content: '·'; margin-right: 0.6rem; }
+  .meta-actions { display: flex; gap: 0.15rem; align-items: center; }
   .ghost-btn {
     font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.8125rem; font-weight: 600;
-    color: var(--ink-soft); background: none; border: 0; padding: 0.3rem 0.5rem; cursor: pointer; border-radius: 6px;
+    color: var(--ink-soft); background: none; border: 0; padding: 0.45rem 0.65rem; cursor: pointer; border-radius: 8px;
     transition: color 0.15s ease, background 0.15s ease;
   }
   .ghost-btn:hover { color: var(--ink); background: var(--surface-2); }
   .ghost-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .ghost-btn.strong { color: var(--accent); }
+  .ghost-btn.danger:hover { color: var(--warn); }
+  .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .note { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.5; margin: -0.6rem 0 0; }
+  .note.err { color: var(--warn); }
+
+  .library { display: flex; flex-direction: column; gap: 0.7rem; }
+  .library h2 { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin: 0; }
+  .lib-list { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .lib-empty { padding: 1.1rem 1.3rem; color: var(--ink-soft); font-size: 0.875rem; line-height: 1.55; }
+  .lib-item { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.95rem 1.3rem 0.8rem; }
+  .lib-item + .lib-item { border-top: 1px solid var(--border); }
+  .lib-title { font-family: 'Fraunces', Georgia, serif; font-weight: 500; font-size: 1.05rem; overflow-wrap: anywhere; }
+  .lib-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; align-items: center; font-size: 0.8125rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .badge { font-size: 0.75rem; font-weight: 600; border-radius: 999px; padding: 0.12rem 0.55rem; border: 1px solid var(--border); }
+  .badge.ready { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .lib-actions { display: flex; flex-wrap: wrap; gap: 0.1rem; margin-left: -0.65rem; }
+  .lib-progress { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .lib-progress > div { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.2s ease; }
+
   .dock {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     background: var(--surface-2); border-top: 1px solid var(--border);
@@ -110,6 +135,7 @@
   #stopBtn:disabled, #playBtn:disabled, .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .icon-btn { background: transparent; color: var(--ink-soft); border-color: var(--border); padding: 0.6rem; }
   .icon-btn:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
+  .ghost-btn, .ghost-btn:active { padding: 0.45rem 0.65rem; border-radius: 8px; font-size: 0.8125rem; }
   .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); flex: none; }
   .status.playing { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
@@ -127,8 +153,6 @@
   }
   .progress-wrap:hover .progress-thumb, .progress-wrap.seeking .progress-thumb { opacity: 1; }
   footer { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 1.1rem; }
-  .banner { display: none; font-size: 0.85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; color: var(--ink-soft); }
-  .banner.show { display: block; }
 </style>
 </head>
 <body>
@@ -141,28 +165,38 @@
         <path d="M18.3 5.3a9 9 0 0 1 0 13.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
       </svg>
       <span class="eyebrow">Read aloud · neural voices</span>
+      <span class="offline-pill" id="offlinePill" hidden>Offline</span>
     </div>
     <h1>Narrator</h1>
-    <p class="sub">Paste anything and press play. Free neural voices, generated on the fly — works from any device, anywhere, no account needed.</p>
+    <p class="sub">Paste text or add a PDF, EPUB or Word file, then press play. Save a story to this device and download its audio to listen with no internet at all.</p>
   </header>
 
-  <div class="banner" id="loadingBanner">Connecting…</div>
-
-  <div class="manuscript">
-    <textarea id="storyInput" spellcheck="false" placeholder="Paste your story here, then press play…"></textarea>
+  <div class="manuscript" id="manuscript">
+    <textarea id="storyInput" spellcheck="false" placeholder="Paste your story here, or add a file…"></textarea>
     <div id="readingView" hidden aria-live="off"></div>
     <div class="meta-row">
       <span class="meta-text"><span id="wordCount">0 words</span><span id="timeEstimate"></span></span>
-      <button class="ghost-btn" id="clearBtn" type="button">Clear</button>
+      <span class="meta-actions">
+        <button class="ghost-btn strong" id="addFileBtn" type="button">Add file</button>
+        <button class="ghost-btn" id="saveBtn" type="button">Save</button>
+        <button class="ghost-btn" id="clearBtn" type="button">Clear</button>
+      </span>
     </div>
   </div>
+  <input type="file" id="fileInput" hidden accept=".pdf,.epub,.docx,.html,.htm,.txt,.md,.markdown,text/plain">
+  <p class="note" id="fileNote" hidden></p>
+
+  <section class="library" aria-labelledby="libTitle">
+    <h2 id="libTitle">Saved on this device</h2>
+    <div class="lib-list" id="libList"></div>
+  </section>
 
   <div class="dock">
     <div class="dock-inner">
       <div class="dock-row">
         <div class="field">
           <label for="voiceSelect">Voice</label>
-          <select id="voiceSelect"><option>Loading voices…</option></select>
+          <select id="voiceSelect"></select>
         </div>
         <div class="field">
           <label for="rateInput">Speed</label>
@@ -177,7 +211,7 @@
           <button id="prevBtn" class="icon-btn" disabled aria-label="Previous sentence">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M12 2.3v11.4c0 .8-.9 1.3-1.6.9l-8-5.7a1 1 0 0 1 0-1.7l8-5.7c.7-.5 1.6 0 1.6.8z"/></svg>
           </button>
-          <button id="playBtn" aria-pressed="false" disabled>
+          <button id="playBtn" aria-pressed="false">
             <span id="playIcon"></span>
             <span id="playLabel">Play</span>
           </button>
@@ -191,7 +225,7 @@
         </div>
         <div class="status" id="statusPill">
           <span class="dot"></span>
-          <span id="statusText">Connecting…</span>
+          <span id="statusText">Ready</span>
         </div>
       </div>
       <div class="progress-wrap" id="progressWrap">
@@ -204,34 +238,33 @@
   </div>
 
   <footer>
-    Runs in the cloud, so it works from anywhere. If it's been idle a while, the first line may take up to a minute to wake up — after that it's quick.
+    Stories you save here, with audio downloaded, play with no internet. Without internet, anything else is read in your device's own built-in voice. Online, the first line may take up to a minute if the server has been idle.
   </footer>
 </main>
 
+<script src="/extract.js"></script>
 <script>
   const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.3v11.4c0 .8.9 1.3 1.6.9l9-5.7a1 1 0 0 0 0-1.7l-9-5.7C4.9 1 4 1.5 4 2.3z"/></svg>';
   const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>';
+  const FALLBACK_VOICES = [
+    { id: 'AriaNeural', label: 'Aria — expressive (US)' },
+    { id: 'JennyNeural', label: 'Jenny — warm, friendly (US)' },
+    { id: 'GuyNeural', label: 'Guy — clear (US)' },
+    { id: 'SoniaNeural', label: 'Sonia — (British)' },
+    { id: 'RyanNeural', label: 'Ryan — (British)' },
+    { id: 'NatashaNeural', label: 'Natasha — (Australian)' },
+  ];
 
-  const storyInput = document.getElementById('storyInput');
-  const readingView = document.getElementById('readingView');
-  const clearBtn = document.getElementById('clearBtn');
-  const voiceSelect = document.getElementById('voiceSelect');
-  const rateInput = document.getElementById('rateInput');
-  const rateValue = document.getElementById('rateValue');
-  const playBtn = document.getElementById('playBtn');
-  const playIcon = document.getElementById('playIcon');
-  const playLabel = document.getElementById('playLabel');
-  const stopBtn = document.getElementById('stopBtn');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const statusPill = document.getElementById('statusPill');
-  const statusText = document.getElementById('statusText');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressFill = document.getElementById('progressFill');
-  const progressThumb = document.getElementById('progressThumb');
-  const wordCountEl = document.getElementById('wordCount');
-  const timeEstimateEl = document.getElementById('timeEstimate');
-  const loadingBanner = document.getElementById('loadingBanner');
+  const $ = (id) => document.getElementById(id);
+  const storyInput = $('storyInput'), readingView = $('readingView'), manuscript = $('manuscript');
+  const clearBtn = $('clearBtn'), saveBtn = $('saveBtn'), addFileBtn = $('addFileBtn'), fileInput = $('fileInput'), fileNote = $('fileNote');
+  const voiceSelect = $('voiceSelect'), rateInput = $('rateInput'), rateValue = $('rateValue');
+  const playBtn = $('playBtn'), playIcon = $('playIcon'), playLabel = $('playLabel'), stopBtn = $('stopBtn');
+  const prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
+  const statusPill = $('statusPill'), statusText = $('statusText');
+  const progressWrap = $('progressWrap'), progressFill = $('progressFill'), progressThumb = $('progressThumb');
+  const wordCountEl = $('wordCount'), timeEstimateEl = $('timeEstimate');
+  const offlinePill = $('offlinePill'), libList = $('libList');
 
   playIcon.innerHTML = ICON_PLAY;
 
@@ -240,28 +273,97 @@
   let playing = false;
   let paused = false;
   let audioEl = null;
-  let prefetch = new Map();
+  let audioIdx = -1;
+  let usingDevice = false;
+  let currentTitle = '';
+  let playToken = 0;
+  let consecutiveFailures = 0;
+  let netBackoffUntil = 0;
+  const sources = new Map();
 
   function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-
   function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function wordsIn(text) { const m = text.trim().match(/\S+/g); return m ? m.length : 0; }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function formatBytes(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 
+  function cyrb53(str) {
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0, ch; i < str.length; i++) {
+      ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+  const audioKey = (voice, text) => voice + '|' + text.length + '|' + cyrb53(text);
+
+  /* ---------- IndexedDB ---------- */
+  let dbPromise;
+  function db() {
+    if (!dbPromise) {
+      dbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open('narrator', 1);
+        req.onupgradeneeded = () => {
+          const d = req.result;
+          if (!d.objectStoreNames.contains('items')) d.createObjectStore('items', { keyPath: 'id', autoIncrement: true });
+          if (!d.objectStoreNames.contains('audio')) d.createObjectStore('audio');
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    return dbPromise;
+  }
+  function tx(store, mode, fn) {
+    return db().then((d) => new Promise((resolve, reject) => {
+      const t = d.transaction(store, mode);
+      let out;
+      const rq = fn(t.objectStore(store));
+      if (rq) rq.onsuccess = () => { out = rq.result; };
+      t.oncomplete = () => resolve(out);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error);
+    }));
+  }
+  const idbGet = (s, k) => tx(s, 'readonly', (st) => st.get(k));
+  const idbPut = (s, v, k) => tx(s, 'readwrite', (st) => (k === undefined ? st.put(v) : st.put(v, k)));
+  const idbDel = (s, k) => tx(s, 'readwrite', (st) => st.delete(k));
+  const idbAll = (s) => tx(s, 'readonly', (st) => st.getAll());
+
+  /* ---------- text / meta ---------- */
   function updateMeta() {
     const count = wordsIn(storyInput.value);
-    wordCountEl.textContent = count === 1 ? '1 word' : count + ' words';
+    wordCountEl.textContent = count === 1 ? '1 word' : count.toLocaleString() + ' words';
     const minutes = count / 140;
     timeEstimateEl.textContent = count === 0 ? '' : (minutes < 1 ? 'under 1 min to listen' : '~' + Math.round(minutes) + ' min to listen');
   }
 
-  storyInput.addEventListener('input', updateMeta);
-  clearBtn.addEventListener('click', () => {
-    storyInput.value = '';
+  function setStoryText(text, title) {
+    chunks = [];
+    currentTitle = title || '';
+    storyInput.value = text;
     updateMeta();
+  }
+
+  storyInput.addEventListener('input', () => { chunks = []; updateMeta(); });
+  clearBtn.addEventListener('click', () => {
+    if (playing) setIdleUI();
+    setStoryText('', '');
+    note('');
     storyInput.focus();
   });
 
+  function note(msg, isError) {
+    fileNote.hidden = !msg;
+    fileNote.textContent = msg || '';
+    fileNote.classList.toggle('err', !!isError);
+  }
+
+  /* ---------- settings ---------- */
   const savedRate = safeGet('narrator.rate');
   if (savedRate) rateInput.value = savedRate;
   rateValue.textContent = parseFloat(rateInput.value).toFixed(1) + '×';
@@ -271,48 +373,58 @@
     if (audioEl) audioEl.playbackRate = parseFloat(rateInput.value);
   });
 
-  async function loadVoices() {
-    const res = await fetch('/api/voices');
-    const voices = await res.json();
-    const savedVoice = safeGet('narrator.voice');
+  function populateVoices(list) {
+    const keep = voiceSelect.value || safeGet('narrator.voice');
     voiceSelect.innerHTML = '';
-    voices.forEach(v => {
+    list.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.id;
       opt.textContent = v.label;
       voiceSelect.appendChild(opt);
     });
-    if (savedVoice && voices.some(v => v.id === savedVoice)) voiceSelect.value = savedVoice;
-    else if (voices.some(v => v.id === 'Ryan')) voiceSelect.value = 'Ryan';
+    if (keep && list.some((v) => v.id === keep)) voiceSelect.value = keep;
+  }
+  async function loadVoices() {
+    let cached = null;
+    try { cached = JSON.parse(safeGet('narrator.voices') || 'null'); } catch (e) {}
+    populateVoices(Array.isArray(cached) && cached.length ? cached : FALLBACK_VOICES);
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 8000);
+      const res = await fetch('/api/voices', { signal: ctl.signal });
+      clearTimeout(timer);
+      const list = await res.json();
+      if (Array.isArray(list) && list.length) {
+        safeSet('narrator.voices', JSON.stringify(list));
+        populateVoices(list);
+      }
+    } catch (e) {}
   }
   voiceSelect.addEventListener('change', () => safeSet('narrator.voice', voiceSelect.value));
 
-  async function waitForModel() {
-    while (true) {
-      try {
-        const res = await fetch('/api/health');
-        const data = await res.json();
-        if (data.ready) return;
-      } catch (e) {}
-      loadingBanner.classList.add('show');
-      statusText.textContent = 'Waking up…';
-      await new Promise(r => setTimeout(r, 2000));
-    }
+  function updateOnlineUI() {
+    const off = !navigator.onLine;
+    offlinePill.hidden = !off;
+    if (!playing) statusText.textContent = off ? 'Offline — saved audio still plays' : 'Ready';
+    renderLibrary();
   }
+  window.addEventListener('online', updateOnlineUI);
+  window.addEventListener('offline', updateOnlineUI);
 
+  /* ---------- chunking ---------- */
   function buildChunks(raw) {
-    const paragraphs = raw.split(/\n+/).map(p => p.trim()).filter(Boolean);
+    const paragraphs = raw.split(/\n+/).map((p) => p.trim()).filter(Boolean);
     const result = [];
     paragraphs.forEach((para, pIdx) => {
       const sentences = para.match(/[^.!?]+[.!?]+[)\]"'’”»›]*(?=\s|$)|[^.!?]+$/g) || [para];
-      sentences.forEach(raw => {
-        let s = raw.replace(/[*_~`^]+/g, '').replace(/\s+/g, ' ').trim();
+      sentences.forEach((rawSentence) => {
+        const s = rawSentence.replace(/[*_~`^]+/g, '').replace(/\s+/g, ' ').trim();
         if (!s) return;
         if (!/[\p{L}\p{N}]/u.test(s)) return;
         if (s.length <= 220) { result.push({ text: s, para: pIdx }); return; }
         const words = s.split(' ');
         let cur = '';
-        words.forEach(w => {
+        words.forEach((w) => {
           if ((cur + ' ' + w).trim().length > 200) { result.push({ text: cur.trim(), para: pIdx }); cur = w; }
           else { cur = (cur + ' ' + w).trim(); }
         });
@@ -361,41 +473,111 @@
     return true;
   }
 
-  async function fetchChunkAudio(i) {
-    if (prefetch.has(i)) return prefetch.get(i);
-    const p = fetch('/api/speak', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: chunks[i].text, voice: voiceSelect.value })
-    }).then(res => { if (!res.ok) throw new Error('speak failed'); return res.blob(); })
-      .then(blob => URL.createObjectURL(blob));
-    prefetch.set(i, p);
-    p.catch(() => prefetch.delete(i));
+  /* ---------- audio sources: stored on device → server → device voice ---------- */
+  class OfflineError extends Error { constructor() { super('offline'); this.name = 'OfflineError'; } }
+
+  async function fetchBlobFromServer(text, voice) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 70000);
+    try {
+      const res = await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice }),
+        signal: ctl.signal,
+      });
+      if (!res.ok) throw new Error('speak failed ' + res.status);
+      return await res.blob();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function resolveChunk(i) {
+    if (sources.has(i)) return sources.get(i);
+    const text = chunks[i].text;
+    const voice = voiceSelect.value;
+    const p = (async () => {
+      try {
+        const stored = await idbGet('audio', audioKey(voice, text));
+        if (stored && stored.blob) return { kind: 'audio', url: URL.createObjectURL(stored.blob) };
+      } catch (e) {}
+      if (!navigator.onLine || Date.now() < netBackoffUntil) throw new OfflineError();
+      try {
+        const blob = await fetchBlobFromServer(text, voice);
+        return { kind: 'audio', url: URL.createObjectURL(blob) };
+      } catch (e) {
+        if (e instanceof TypeError || e.name === 'AbortError') netBackoffUntil = Date.now() + 20000;
+        throw e;
+      }
+    })();
+    sources.set(i, p);
+    p.catch(() => sources.delete(i));
     return p;
   }
 
-  let playToken = 0;
+  function dropSources(keep) {
+    for (const [k, p] of [...sources]) {
+      if (keep && keep(k)) continue;
+      sources.delete(k);
+      p.then((s) => { if (s && s.url) URL.revokeObjectURL(s.url); }).catch(() => {});
+    }
+  }
 
-  function setIdleUI() {
+  const canUseDeviceVoice = () => 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  function stopDeviceVoice() { if (canUseDeviceVoice()) { try { speechSynthesis.cancel(); } catch (e) {} } }
+  function pickDeviceVoice() {
+    const vs = speechSynthesis.getVoices();
+    const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+    return vs.find((v) => v.lang && v.lang.toLowerCase().startsWith(lang) && v.localService)
+      || vs.find((v) => v.lang && v.lang.toLowerCase().startsWith(lang))
+      || vs[0] || null;
+  }
+  function speakWithDevice(i, token) {
+    const u = new SpeechSynthesisUtterance(chunks[i].text);
+    const v = pickDeviceVoice();
+    if (v) u.voice = v;
+    u.rate = parseFloat(rateInput.value);
+    let finished = false;
+    const next = () => { if (finished) return; finished = true; if (playing && token === playToken) playChunk(i + 1); };
+    u.onend = next;
+    u.onerror = (e) => { if (e.error === 'canceled' || e.error === 'interrupted') return; next(); };
+    speechSynthesis.cancel();
+    setTimeout(() => { if (playing && token === playToken) speechSynthesis.speak(u); }, 60);
+  }
+
+  /* ---------- playback ---------- */
+  function setIdleUI(message) {
     playToken++;
     consecutiveFailures = 0;
-    playing = false; paused = false;
+    playing = false; paused = false; usingDevice = false;
     playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Play';
     playBtn.setAttribute('aria-pressed', 'false');
     stopBtn.disabled = true;
     prevBtn.disabled = true; nextBtn.disabled = true;
     statusPill.classList.remove('playing', 'busy');
-    statusText.textContent = 'Ready';
+    statusText.textContent = message || (navigator.onLine ? 'Ready' : 'Offline — saved audio still plays');
     progressFill.style.width = '0%';
     progressThumb.style.left = '0%';
     readingView.hidden = true;
     storyInput.hidden = false;
     if (audioEl) { audioEl.pause(); audioEl = null; }
-    prefetch.clear();
+    audioIdx = -1;
+    stopDeviceVoice();
+    dropSources();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
   }
 
-  let consecutiveFailures = 0;
+  function updateMediaSession(state) {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Sentence ' + (idx + 1) + ' of ' + chunks.length,
+        artist: currentTitle || 'Narrator',
+      });
+      navigator.mediaSession.playbackState = state;
+    } catch (e) {}
+  }
 
   async function playChunk(i) {
     if (!playing) return;
@@ -405,54 +587,59 @@
     highlight(idx);
     updateProgress();
     updateSkipButtons();
+    dropSources((k) => k >= i - 6 && k <= i + 6);
     statusPill.classList.add('busy');
     statusText.textContent = 'Generating…';
-    let url;
+    let src;
     try {
-      url = await fetchChunkAudio(i);
+      src = await resolveChunk(i);
       consecutiveFailures = 0;
     } catch (e) {
       if (token !== playToken) return;
-      consecutiveFailures++;
-      if (consecutiveFailures >= 5) {
-        statusText.textContent = 'Voice service unavailable — try again in a moment';
-        setIdleUI();
+      if (canUseDeviceVoice()) {
+        src = { kind: 'device' };
+      } else {
+        consecutiveFailures++;
+        if (consecutiveFailures >= 5) {
+          setIdleUI(navigator.onLine ? 'Voice service unavailable — try again in a moment' : 'Offline — this text has no saved audio');
+          return;
+        }
+        statusText.textContent = 'Skipped a line that failed to load…';
+        playChunk(i + 1);
         return;
       }
-      statusText.textContent = 'Skipped a line that failed to load…';
-      playChunk(i + 1);
-      return;
     }
     if (!playing || token !== playToken) return;
     statusPill.classList.remove('busy');
     statusPill.classList.add('playing');
-    statusText.textContent = 'Reading — sentence ' + (i + 1) + ' of ' + chunks.length;
+    statusText.textContent = 'Reading — sentence ' + (i + 1) + ' of ' + chunks.length + (src.kind === 'device' ? ' · device voice' : '');
     if (audioEl) audioEl.pause();
-    audioEl = new Audio(url);
-    audioEl.playbackRate = parseFloat(rateInput.value);
-    audioEl.onended = () => { if (playing && token === playToken) playChunk(i + 1); };
-    audioEl.play();
-    updateMediaSession('playing');
-    for (let j = i + 1; j <= i + 3 && j < chunks.length; j++) {
-      fetchChunkAudio(j).catch(() => {});
-    }
-  }
-
-  function updateMediaSession(state) {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Sentence ' + (idx + 1) + ' of ' + chunks.length,
-        artist: 'Narrator',
+    if (src.kind === 'device') {
+      usingDevice = true; audioEl = null; audioIdx = -1;
+      speakWithDevice(i, token);
+    } else {
+      usingDevice = false; stopDeviceVoice();
+      audioEl = new Audio(src.url);
+      audioIdx = i;
+      audioEl.playbackRate = parseFloat(rateInput.value);
+      audioEl.onended = () => { if (playing && token === playToken) playChunk(i + 1); };
+      audioEl.play().catch((err) => {
+        if (token !== playToken || !playing || (err && err.name === 'AbortError')) return;
+        paused = true;
+        playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Resume';
+        statusPill.classList.remove('playing', 'busy');
+        statusText.textContent = 'Tap Resume to continue';
       });
-      navigator.mediaSession.playbackState = state;
-    } catch (e) {}
+    }
+    updateMediaSession('playing');
+    for (let j = i + 1; j <= i + 3 && j < chunks.length; j++) resolveChunk(j).catch(() => {});
   }
 
   function seekTo(i) {
     if (!ensureChunks()) return;
     i = Math.min(chunks.length - 1, Math.max(0, i));
     if (audioEl) audioEl.pause();
+    stopDeviceVoice();
     playing = true; paused = false;
     playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
     playBtn.setAttribute('aria-pressed', 'true');
@@ -481,9 +668,9 @@
   prevBtn.addEventListener('click', () => seekTo(idx - 1));
   nextBtn.addEventListener('click', () => seekTo(idx + 1));
 
-  async function startPlaying() {
+  function startPlaying() {
     chunks = buildChunks(storyInput.value);
-    if (!chunks.length) return;
+    if (!chunks.length) { note('Nothing to read yet — paste some text or add a file first.', true); return; }
     renderReadingView();
     storyInput.hidden = true;
     readingView.hidden = false;
@@ -495,23 +682,32 @@
   }
 
   playBtn.addEventListener('click', () => {
-    if (!playing) { startPlaying(); }
-    else if (!paused && audioEl) {
-      audioEl.pause(); paused = true;
+    if (!playing) { startPlaying(); return; }
+    if (!paused) {
+      const liveAudio = audioEl && audioIdx === idx && !usingDevice;
+      if (liveAudio) audioEl.pause();
+      else { playToken++; stopDeviceVoice(); }
+      paused = true;
       playIcon.innerHTML = ICON_PLAY; playLabel.textContent = 'Resume';
-      statusPill.classList.remove('playing');
+      statusPill.classList.remove('playing', 'busy');
       statusText.textContent = 'Paused';
       updateMediaSession('paused');
-    } else if (audioEl) {
-      audioEl.play(); paused = false;
+    } else {
+      paused = false;
       playIcon.innerHTML = ICON_PAUSE; playLabel.textContent = 'Pause';
-      statusPill.classList.add('playing');
-      statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
-      updateMediaSession('playing');
+      const liveAudio = audioEl && audioIdx === idx && !usingDevice;
+      if (liveAudio) {
+        audioEl.play().catch(() => {});
+        statusPill.classList.add('playing');
+        statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
+        updateMediaSession('playing');
+      } else {
+        playChunk(idx);
+      }
     }
   });
 
-  stopBtn.addEventListener('click', setIdleUI);
+  stopBtn.addEventListener('click', () => setIdleUI());
 
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => playBtn.click());
@@ -521,14 +717,265 @@
     navigator.mediaSession.setActionHandler('stop', () => setIdleUI());
   }
 
-  (async function init() {
-    updateMeta();
-    await loadVoices();
-    await waitForModel();
-    loadingBanner.classList.remove('show');
-    playBtn.disabled = false;
-    statusText.textContent = 'Ready';
-  })();
+  /* ---------- files ---------- */
+  async function loadFile(file) {
+    if (typeof extractTextFromFile !== 'function') {
+      note('The file reader isn\'t loaded yet — reload the page once while online.', true);
+      return;
+    }
+    if (playing) setIdleUI();
+    note('Reading “' + file.name + '”…');
+    try {
+      const { title, text } = await extractTextFromFile(file, (msg) => note('“' + file.name + '” — ' + msg));
+      setStoryText(text, title);
+      note('Loaded “' + title + '” — ' + wordsIn(text).toLocaleString() + ' words. Press Play, or Save to keep it on this device.');
+    } catch (e) {
+      note(e && e.message ? e.message : 'Could not read that file.', true);
+    }
+  }
+  addFileBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if (f) loadFile(f);
+  });
+  manuscript.addEventListener('dragover', (e) => { e.preventDefault(); manuscript.classList.add('dragover'); });
+  manuscript.addEventListener('dragleave', () => manuscript.classList.remove('dragover'));
+  manuscript.addEventListener('drop', (e) => {
+    e.preventDefault();
+    manuscript.classList.remove('dragover');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  /* ---------- library ---------- */
+  let libItems = [];
+  const downloads = new Map();
+
+  async function refreshLibrary() {
+    try {
+      libItems = (await idbAll('items')).sort((a, b) => b.createdAt - a.createdAt);
+    } catch (e) {
+      libItems = [];
+      libList.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.className = 'lib-empty';
+      msg.textContent = 'Saving isn\'t available in this browser (private mode may block it).';
+      libList.appendChild(msg);
+      return;
+    }
+    renderLibrary();
+  }
+
+  function itemStatus(item, job) {
+    if (job) return { text: 'Downloading ' + job.done + ' / ' + job.total + '…', ready: false };
+    if (item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal) {
+      return { text: 'Offline ready · ' + formatBytes(item.offlineBytes || 0), ready: true };
+    }
+    if (item.offlineCount > 0) return { text: 'Partly downloaded · ' + item.offlineCount + ' / ' + item.offlineTotal, ready: false };
+    return { text: 'Not downloaded', ready: false };
+  }
+
+  function actionButton(label, cls, onClick, disabled) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ghost-btn ' + (cls || '');
+    b.textContent = label;
+    b.disabled = !!disabled;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function renderLibrary() {
+    if (!libList) return;
+    libList.innerHTML = '';
+    if (!libItems.length) {
+      const empty = document.createElement('div');
+      empty.className = 'lib-empty';
+      empty.textContent = 'Nothing saved yet. Paste text or add a file, then tap Save to keep it on this device — and download its audio to listen with no internet.';
+      libList.appendChild(empty);
+      return;
+    }
+    libItems.forEach((item) => {
+      const job = downloads.get(item.id);
+      const status = itemStatus(item, job);
+      const row = document.createElement('div');
+      row.className = 'lib-item';
+      row.dataset.id = item.id;
+
+      const title = document.createElement('div');
+      title.className = 'lib-title';
+      title.textContent = item.title;
+      row.appendChild(title);
+
+      const meta = document.createElement('div');
+      meta.className = 'lib-meta';
+      const words = document.createElement('span');
+      words.textContent = (item.words || 0).toLocaleString() + ' words';
+      const badge = document.createElement('span');
+      badge.className = 'badge' + (status.ready ? ' ready' : '');
+      badge.textContent = status.text;
+      badge.dataset.role = 'status';
+      meta.append(words, badge);
+      row.appendChild(meta);
+
+      if (job) {
+        const bar = document.createElement('div');
+        bar.className = 'lib-progress';
+        const fill = document.createElement('div');
+        fill.dataset.role = 'bar';
+        fill.style.width = Math.round((job.done / Math.max(1, job.total)) * 100) + '%';
+        bar.appendChild(fill);
+        row.appendChild(bar);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'lib-actions';
+      actions.appendChild(actionButton('Read', 'strong', () => openItem(item, true)));
+      if (job) {
+        actions.appendChild(actionButton('Cancel download', '', () => { job.cancel = true; }));
+      } else {
+        const full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
+        if (!full) {
+          const label = item.offlineCount > 0 ? 'Resume download' : 'Download for offline';
+          actions.appendChild(actionButton(label, '', () => startDownload(item), !navigator.onLine));
+        } else {
+          actions.appendChild(actionButton('Remove download', '', () => removeDownload(item)));
+        }
+        actions.appendChild(actionButton('Delete', 'danger', () => deleteItem(item)));
+      }
+      row.appendChild(actions);
+      libList.appendChild(row);
+    });
+  }
+
+  function updateDownloadUI(id) {
+    const row = libList.querySelector('.lib-item[data-id="' + id + '"]');
+    const job = downloads.get(id);
+    if (!row || !job) return;
+    const badge = row.querySelector('[data-role="status"]');
+    const bar = row.querySelector('[data-role="bar"]');
+    if (badge) badge.textContent = 'Downloading ' + job.done + ' / ' + job.total + '…';
+    if (bar) bar.style.width = Math.round((job.done / Math.max(1, job.total)) * 100) + '%';
+  }
+
+  async function saveCurrent() {
+    const text = storyInput.value.trim();
+    if (!text) { note('Nothing to save yet — paste some text or add a file first.', true); return; }
+    const dupe = libItems.find((it) => it.text === text);
+    if (dupe) { note('Already saved as “' + dupe.title + '”.'); return; }
+    const title = (currentTitle || text.replace(/\s+/g, ' ').slice(0, 48)).trim();
+    const item = { title, text, words: wordsIn(text), createdAt: Date.now(), offlineVoice: null, offlineCount: 0, offlineTotal: 0, offlineBytes: 0 };
+    try {
+      item.id = await idbPut('items', item);
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    } catch (e) {
+      note('Couldn\'t save on this device — storage may be full or blocked.', true);
+      return;
+    }
+    libItems.unshift(item);
+    renderLibrary();
+    note('Saved “' + title + '”. Tap “Download for offline” below to make it play with no internet.');
+  }
+  saveBtn.addEventListener('click', saveCurrent);
+
+  function openItem(item, play) {
+    if (playing) setIdleUI();
+    setStoryText(item.text, item.title);
+    if (item.offlineVoice && [...voiceSelect.options].some((o) => o.value === item.offlineVoice)) {
+      voiceSelect.value = item.offlineVoice;
+      safeSet('narrator.voice', item.offlineVoice);
+    }
+    note('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (play) startPlaying();
+  }
+
+  async function startDownload(item) {
+    if (downloads.has(item.id)) return;
+    if (!navigator.onLine) { note('Connect to the internet to download audio.', true); return; }
+    const voice = voiceSelect.value;
+    const cs = buildChunks(item.text);
+    if (!cs.length) return;
+    const job = { cancel: false, done: 0, ok: 0, failed: 0, total: cs.length, bytes: 0 };
+    downloads.set(item.id, job);
+    renderLibrary();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    let wake = null;
+    try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    let next = 0;
+    const worker = async () => {
+      while (!job.cancel) {
+        const k = next++;
+        if (k >= cs.length) return;
+        const key = audioKey(voice, cs[k].text);
+        try {
+          const existing = await idbGet('audio', key);
+          if (existing && existing.blob) {
+            job.bytes += existing.size || existing.blob.size || 0;
+            job.ok++;
+          } else {
+            let blob = null;
+            for (let attempt = 0; attempt < 3 && !blob && !job.cancel; attempt++) {
+              try { blob = await fetchBlobFromServer(cs[k].text, voice); } catch (e) { await sleep(900 * (attempt + 1)); }
+            }
+            if (blob) {
+              await idbPut('audio', { blob, size: blob.size }, key);
+              job.bytes += blob.size;
+              job.ok++;
+            } else if (!job.cancel) {
+              job.failed++;
+            }
+          }
+        } catch (e) {
+          job.failed++;
+        }
+        job.done++;
+        updateDownloadUI(item.id);
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (wake) wake.release().catch(() => {});
+    downloads.delete(item.id);
+    item.offlineVoice = voice;
+    item.offlineTotal = cs.length;
+    item.offlineCount = job.ok;
+    item.offlineBytes = job.bytes;
+    try { await idbPut('items', item); } catch (e) {}
+    renderLibrary();
+    if (job.cancel) note('Download paused — tap “Resume download” any time.');
+    else if (job.failed) note(job.failed + ' line(s) couldn\'t be downloaded. Tap “Resume download” to try again.', true);
+    else note('“' + item.title + '” is ready to play with no internet.');
+  }
+
+  async function removeDownload(item) {
+    const voice = item.offlineVoice;
+    if (voice) {
+      for (const c of buildChunks(item.text)) {
+        try { await idbDel('audio', audioKey(voice, c.text)); } catch (e) {}
+      }
+    }
+    item.offlineCount = 0; item.offlineTotal = 0; item.offlineBytes = 0; item.offlineVoice = null;
+    try { await idbPut('items', item); } catch (e) {}
+    renderLibrary();
+    note('Removed the downloaded audio for “' + item.title + '”.');
+  }
+
+  async function deleteItem(item) {
+    if (!window.confirm('Delete “' + item.title + '” and its downloaded audio from this device?')) return;
+    await removeDownload(item);
+    try { await idbDel('items', item.id); } catch (e) {}
+    libItems = libItems.filter((it) => it.id !== item.id);
+    renderLibrary();
+    note('Deleted “' + item.title + '”.');
+  }
+
+  /* ---------- start ---------- */
+  updateMeta();
+  loadVoices();
+  updateOnlineUI();
+  refreshLibrary();
+  fetch('/api/health').catch(() => {});
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
