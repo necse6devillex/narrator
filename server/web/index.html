@@ -179,6 +179,7 @@
       <span class="meta-actions">
         <button class="ghost-btn strong" id="addFileBtn" type="button">Add file</button>
         <button class="ghost-btn" id="saveBtn" type="button">Save</button>
+        <button class="ghost-btn" id="exportBtn" type="button">Export MP3</button>
         <button class="ghost-btn" id="clearBtn" type="button">Clear</button>
       </span>
     </div>
@@ -257,7 +258,7 @@
 
   const $ = (id) => document.getElementById(id);
   const storyInput = $('storyInput'), readingView = $('readingView'), manuscript = $('manuscript');
-  const clearBtn = $('clearBtn'), saveBtn = $('saveBtn'), addFileBtn = $('addFileBtn'), fileInput = $('fileInput'), fileNote = $('fileNote');
+  const clearBtn = $('clearBtn'), saveBtn = $('saveBtn'), exportBtn = $('exportBtn'), addFileBtn = $('addFileBtn'), fileInput = $('fileInput'), fileNote = $('fileNote');
   const voiceSelect = $('voiceSelect'), rateInput = $('rateInput'), rateValue = $('rateValue');
   const playBtn = $('playBtn'), playIcon = $('playIcon'), playLabel = $('playLabel'), stopBtn = $('stopBtn');
   const prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
@@ -751,6 +752,8 @@
   /* ---------- library ---------- */
   let libItems = [];
   const downloads = new Map();
+  const exportJobs = new Map();
+  const activeJob = (id) => downloads.get(id) || exportJobs.get(id);
 
   async function refreshLibrary() {
     try {
@@ -768,7 +771,7 @@
   }
 
   function itemStatus(item, job) {
-    if (job) return { text: 'Downloading ' + job.done + ' / ' + job.total + '…', ready: false };
+    if (job) return { text: (job.label || 'Downloading') + ' ' + job.done + ' / ' + job.total + '…', ready: false };
     if (item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal) {
       return { text: 'Offline ready · ' + formatBytes(item.offlineBytes || 0), ready: true };
     }
@@ -797,7 +800,7 @@
       return;
     }
     libItems.forEach((item) => {
-      const job = downloads.get(item.id);
+      const job = activeJob(item.id);
       const status = itemStatus(item, job);
       const row = document.createElement('div');
       row.className = 'lib-item';
@@ -833,9 +836,10 @@
       actions.className = 'lib-actions';
       actions.appendChild(actionButton('Read', 'strong', () => openItem(item, true)));
       if (job) {
-        actions.appendChild(actionButton('Cancel download', '', () => { job.cancel = true; }));
+        actions.appendChild(actionButton(job.label === 'Making MP3' ? 'Cancel' : 'Cancel download', '', () => { job.cancel = true; }));
       } else {
         const full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
+        actions.appendChild(actionButton('Save as MP3', '', () => exportItem(item), !full && !navigator.onLine));
         if (!full) {
           const label = item.offlineCount > 0 ? 'Resume download' : 'Download for offline';
           actions.appendChild(actionButton(label, '', () => startDownload(item), !navigator.onLine));
@@ -851,11 +855,11 @@
 
   function updateDownloadUI(id) {
     const row = libList.querySelector('.lib-item[data-id="' + id + '"]');
-    const job = downloads.get(id);
+    const job = activeJob(id);
     if (!row || !job) return;
     const badge = row.querySelector('[data-role="status"]');
     const bar = row.querySelector('[data-role="bar"]');
-    if (badge) badge.textContent = 'Downloading ' + job.done + ' / ' + job.total + '…';
+    if (badge) badge.textContent = (job.label || 'Downloading') + ' ' + job.done + ' / ' + job.total + '…';
     if (bar) bar.style.width = Math.round((job.done / Math.max(1, job.total)) * 100) + '%';
   }
 
@@ -969,6 +973,170 @@
     renderLibrary();
     note('Deleted “' + item.title + '”.');
   }
+
+  /* ---------- MP3 export ---------- */
+  const MP3_FRAME = 144;
+  function silenceBlob(frames) {
+    const u8 = new Uint8Array(frames * MP3_FRAME);
+    for (let i = 0; i < frames; i++) u8.set([0xFF, 0xF3, 0x64, 0xC4], i * MP3_FRAME);
+    return new Blob([u8], { type: 'audio/mpeg' });
+  }
+
+  function id3Tag(title, artist, album) {
+    const enc = new TextEncoder();
+    const synchsafe = (arr, off, n) => {
+      arr[off] = (n >> 21) & 0x7f; arr[off + 1] = (n >> 14) & 0x7f; arr[off + 2] = (n >> 7) & 0x7f; arr[off + 3] = n & 0x7f;
+    };
+    const frame = (id, text) => {
+      const body = new Uint8Array([3, ...enc.encode(text)]);
+      const f = new Uint8Array(10 + body.length);
+      f.set(enc.encode(id), 0);
+      synchsafe(f, 4, body.length);
+      f.set(body, 10);
+      return f;
+    };
+    const frames = [frame('TIT2', title), frame('TPE1', artist), frame('TALB', album)];
+    const size = frames.reduce((n, f) => n + f.length, 0);
+    const out = new Uint8Array(10 + size);
+    out.set([0x49, 0x44, 0x33, 4, 0, 0], 0);
+    synchsafe(out, 6, size);
+    let o = 10;
+    frames.forEach((f) => { out.set(f, o); o += f.length; });
+    return out;
+  }
+
+  let trimCtx = null;
+  async function trimTrailingSilence(blob) {
+    const bytes = await blob.arrayBuffer();
+    const head = new Uint8Array(bytes, 0, 3);
+    const frames = Math.floor(bytes.byteLength / MP3_FRAME);
+    if (frames < 12 || head[0] !== 0xFF || head[1] !== 0xF3 || head[2] !== 0x64) return blob;
+    try {
+      const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!Ctx) return blob;
+      trimCtx = trimCtx || new Ctx(1, 1, 24000);
+      const audio = await trimCtx.decodeAudioData(bytes.slice(0));
+      const samples = audio.getChannelData(0);
+      let last = samples.length - 1;
+      while (last > 0 && Math.abs(samples[last]) < 0.002) last--;
+      const keep = Math.min(frames, Math.ceil(last / 576) + 1 + 8);
+      return keep >= frames ? blob : blob.slice(0, keep * MP3_FRAME, 'audio/mpeg');
+    } catch (e) {
+      return blob;
+    }
+  }
+
+  async function assembleMp3(parts, title) {
+    const sentenceGap = silenceBlob(4);
+    const paragraphGap = silenceBlob(28);
+    const out = [id3Tag(title, 'Narrator', 'Narrator')];
+    for (let i = 0; i < parts.length; i++) {
+      out.push(await trimTrailingSilence(parts[i].blob));
+      if (i < parts.length - 1) out.push(parts[i + 1].para !== parts[i].para ? paragraphGap : sentenceGap);
+    }
+    return new Blob(out, { type: 'audio/mpeg' });
+  }
+
+  function voiceName(voiceId) {
+    const opt = [...voiceSelect.options].find((o) => o.value === voiceId);
+    return opt ? opt.textContent.split(' — ')[0] : voiceId;
+  }
+
+  function safeFilename(s) {
+    return (s || 'Narration').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Narration';
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  }
+
+  async function exportItem(item) {
+    if (activeJob(item.id)) return;
+    let full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
+    if (!full) {
+      if (!navigator.onLine) { note('Connect to the internet once to prepare the MP3.', true); return; }
+      await startDownload(item);
+      full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
+      if (!full) return;
+    }
+    const voice = item.offlineVoice;
+    const cs = buildChunks(item.text);
+    const job = { label: 'Making MP3', done: 0, total: cs.length, cancel: false };
+    exportJobs.set(item.id, job);
+    renderLibrary();
+    try {
+      const parts = [];
+      for (let k = 0; k < cs.length; k++) {
+        if (job.cancel) { note('MP3 export cancelled.'); return; }
+        const stored = await idbGet('audio', audioKey(voice, cs[k].text));
+        if (!stored || !stored.blob) throw new Error('Part of the downloaded audio is missing — tap Resume download, then try again.');
+        parts.push({ blob: stored.blob, para: cs[k].para });
+        job.done++;
+        if (k % 20 === 0) updateDownloadUI(item.id);
+      }
+      const blob = await assembleMp3(parts, item.title);
+      triggerDownload(blob, safeFilename(item.title) + ' (' + voiceName(voice) + ').mp3');
+      note('Saved “' + item.title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceName(voice) + ' voice). Check your Downloads.');
+    } catch (e) {
+      note(e && e.message ? e.message : 'Couldn\'t build the MP3.', true);
+    } finally {
+      exportJobs.delete(item.id);
+      renderLibrary();
+    }
+  }
+
+  let exportingCurrent = null;
+  async function exportCurrentMp3() {
+    if (exportingCurrent) { exportingCurrent.cancel = true; return; }
+    const text = storyInput.value.trim();
+    if (!text) { note('Nothing to export yet — paste some text or add a file first.', true); return; }
+    const saved = libItems.find((it) => it.text === text);
+    if (saved) { exportItem(saved); return; }
+    if (!navigator.onLine) { note('Exporting new text needs an internet connection. Save it first and download its audio, or reconnect.', true); return; }
+    const voice = voiceSelect.value;
+    const cs = buildChunks(text);
+    if (!cs.length) { note('There\'s nothing readable in this text.', true); return; }
+    const job = { cancel: false, failed: false };
+    exportingCurrent = job;
+    exportBtn.textContent = 'Cancel export';
+    const results = new Array(cs.length);
+    let next = 0, done = 0;
+    let wake = null;
+    try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    note('Making MP3… 0 / ' + cs.length + ' lines');
+    const worker = async () => {
+      while (!job.cancel && !job.failed) {
+        const k = next++;
+        if (k >= cs.length) return;
+        let blob = null;
+        for (let attempt = 0; attempt < 3 && !blob && !job.cancel; attempt++) {
+          try { blob = await fetchBlobFromServer(cs[k].text, voice); } catch (e) { await sleep(900 * (attempt + 1)); }
+        }
+        if (!blob) { if (!job.cancel) job.failed = true; return; }
+        results[k] = { blob, para: cs[k].para };
+        done++;
+        note('Making MP3… ' + done + ' / ' + cs.length + ' lines');
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (wake) wake.release().catch(() => {});
+    exportingCurrent = null;
+    exportBtn.textContent = 'Export MP3';
+    if (job.cancel) { note('MP3 export cancelled.'); return; }
+    if (job.failed) { note('A line couldn\'t be generated, so the MP3 wasn\'t created. Check your connection and try again.', true); return; }
+    const title = currentTitle || text.replace(/\s+/g, ' ').slice(0, 48);
+    const blob = await assembleMp3(results, title);
+    triggerDownload(blob, safeFilename(title) + ' (' + voiceName(voice) + ').mp3');
+    note('Saved “' + title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceName(voice) + ' voice). Check your Downloads.');
+  }
+  exportBtn.addEventListener('click', exportCurrentMp3);
 
   /* ---------- start ---------- */
   updateMeta();
