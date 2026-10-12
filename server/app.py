@@ -80,6 +80,39 @@ async def speak(req: SpeakRequest):
     return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
+@app.get("/api/diag")
+async def diag():
+    import datetime, platform, time as _t
+    import aiohttp
+    from edge_tts.drm import DRM
+    out = {"python": platform.python_version(), "edge_tts": getattr(edge_tts, "__version__", "?"),
+           "aiohttp": aiohttp.__version__, "server_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.get("https://api.ipify.org?format=json", timeout=aiohttp.ClientTimeout(total=8)) as r:
+                out["egress_ip"] = await r.text()
+            async with s.get("https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4",
+                             timeout=aiohttp.ClientTimeout(total=8)) as r:
+                out["voices_list_status"] = r.status
+                out["ms_date_header"] = r.headers.get("Date")
+    except Exception as e:
+        out["net_error"] = str(e)[:200]
+    results = []
+    for i in range(8):
+        t0 = _t.time()
+        try:
+            n = 0
+            async for ch in edge_tts.Communicate(f"Diagnostic sentence number {i}, hello there.", "en-US-JennyNeural").stream():
+                if ch["type"] == "audio":
+                    n += len(ch["data"])
+            results.append({"ok": n > 0, "bytes": n, "secs": round(_t.time() - t0, 2)})
+        except Exception as e:
+            results.append({"ok": False, "err": str(e)[:90], "secs": round(_t.time() - t0, 2)})
+    out["attempts"] = results
+    out["skew_seconds"] = DRM.clock_skew_seconds
+    return out
+
+
 WEB_DIR = Path(__file__).parent / "web"
 
 
