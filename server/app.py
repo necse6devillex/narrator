@@ -1,9 +1,13 @@
 import asyncio
 import hashlib
 import io
+import os
+import re
 import time
 from pathlib import Path
+from xml.sax.saxutils import escape
 
+import aiohttp
 import edge_tts
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
@@ -24,13 +28,32 @@ _cache: dict[tuple[str, str], bytes] = {}
 _cache_order: list[tuple[str, str]] = []
 
 BLOCK_AFTER = 3
-BLOCK_SECONDS = 120
+BLOCK_SECONDS = {"blocked": 120, "unreachable": 30, "error": 30, "key": 300, "busy": 8}
+
+AZURE_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
+
+
+def azure_config():
+    key = os.environ.get("AZURE_SPEECH_KEY", "").strip()
+    region = os.environ.get("AZURE_SPEECH_REGION", "").strip().lower()
+    if not (key and region):
+        return None
+    url = os.environ.get("AZURE_SPEECH_ENDPOINT", "").strip() or f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
+    return key, url
+
+
+class UpstreamError(Exception):
+    def __init__(self, reason: str, status: int | None = None):
+        super().__init__(reason)
+        self.reason = reason
+        self.status = status
 
 
 class Upstream:
-    """Microsoft's free voice service sometimes refuses this server (HTTP 403).
-    Remember that, so the app finds out instantly instead of waiting on retries."""
+    """Tracks whether the voice service is answering, so the app finds out instantly
+    instead of waiting on retries. reason: blocked | key | busy | unreachable | error."""
     state = "unknown"  # "ok" | "blocked" | "unknown"
+    reason = ""
     fail_streak = 0
     blocked_until = 0.0
 
@@ -47,7 +70,53 @@ class SpeakRequest(BaseModel):
     voice: str
 
 
+def clean_text(text: str) -> str:
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", text)
+
+
+async def azure_synth(text: str, voice_id: str) -> bytes:
+    key, url = azure_config()
+    ssml = (
+        "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>"
+        f"<voice name='{voice_id}'>{escape(clean_text(text))}</voice></speak>"
+    )
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": AZURE_FORMAT,
+        "User-Agent": "narrator",
+    }
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as session:
+            async with session.post(url, data=ssml.encode("utf-8"), headers=headers) as r:
+                if r.status == 200:
+                    data = await r.read()
+                    if data:
+                        return data
+                    raise UpstreamError("error", 200)
+                if r.status in (401, 403):
+                    raise UpstreamError("key", r.status)
+                if r.status == 429:
+                    raise UpstreamError("busy", 429)
+                raise UpstreamError("error", r.status)
+    except UpstreamError:
+        raise
+    except Exception:
+        raise UpstreamError("unreachable")
+
+
 async def synth(text: str, voice_id: str, attempts: int = 2) -> bytes:
+    if azure_config():
+        last = None
+        for a in range(attempts + 1):
+            try:
+                return await azure_synth(text, voice_id)
+            except UpstreamError as e:
+                last = e
+                if e.reason == "key":
+                    break
+                await asyncio.sleep(0.6 * (a + 1) if e.reason == "busy" else 0.25)
+        raise last
     last = None
     for a in range(attempts):
         try:
@@ -62,20 +131,22 @@ async def synth(text: str, voice_id: str, attempts: int = 2) -> bytes:
             last = e
         if a + 1 < attempts:
             await asyncio.sleep(0.25)
-    raise last or RuntimeError("no audio")
+    raise UpstreamError("blocked") if last else UpstreamError("error")
 
 
 def mark_ok():
     UP.fail_streak = 0
     UP.state = "ok"
+    UP.reason = ""
     UP.blocked_until = 0.0
 
 
-def mark_failed():
+def mark_failed(reason: str):
     UP.fail_streak += 1
-    if UP.fail_streak >= BLOCK_AFTER:
+    UP.reason = reason
+    if reason in ("key", "busy") or UP.fail_streak >= BLOCK_AFTER:
         UP.state = "blocked"
-        UP.blocked_until = time.time() + BLOCK_SECONDS
+        UP.blocked_until = time.time() + BLOCK_SECONDS.get(reason, 60)
 
 
 async def probe():
@@ -83,12 +154,12 @@ async def probe():
         if UP.state == "ok" or (UP.state == "blocked" and time.time() < UP.blocked_until):
             return
         try:
-            await asyncio.wait_for(synth("Ready.", VOICES["AriaNeural"]["id"], attempts=3), timeout=10)
+            await asyncio.wait_for(synth("Ready.", VOICES["AriaNeural"]["id"], attempts=3), timeout=12)
             mark_ok()
-        except Exception:
+        except Exception as e:
+            reason = e.reason if isinstance(e, UpstreamError) else "unreachable"
             UP.fail_streak = max(UP.fail_streak, BLOCK_AFTER)
-            UP.state = "blocked"
-            UP.blocked_until = time.time() + BLOCK_SECONDS
+            mark_failed(reason)
 
 
 @app.get("/api/health")
@@ -96,7 +167,7 @@ async def health():
     if UP.state == "unknown" or (UP.state == "blocked" and time.time() >= UP.blocked_until):
         await probe()
     retry = max(0, int(UP.blocked_until - time.time())) if UP.state == "blocked" else 0
-    return {"ready": True, "neural": UP.state, "retry_after": retry}
+    return {"ready": True, "neural": UP.state, "reason": UP.reason, "retry_after": retry, "route": "official" if azure_config() else "free"}
 
 
 @app.get("/api/voices")
@@ -119,14 +190,15 @@ async def speak(req: SpeakRequest):
 
     now = time.time()
     if UP.state == "blocked" and now < UP.blocked_until:
-        raise HTTPException(503, "voices-blocked", headers={"Retry-After": str(int(UP.blocked_until - now) + 1)})
+        raise HTTPException(503, UP.reason or "blocked", headers={"Retry-After": str(int(UP.blocked_until - now) + 1)})
 
     async with GATE:
         try:
             audio_bytes = await asyncio.wait_for(synth(text, VOICES[req.voice]["id"]), timeout=25)
-        except Exception:
-            mark_failed()
-            raise HTTPException(502, "voice-service-error")
+        except Exception as e:
+            reason = e.reason if isinstance(e, UpstreamError) else "unreachable"
+            mark_failed(reason)
+            raise HTTPException(503 if UP.state == "blocked" else 502, reason)
     mark_ok()
 
     if key not in _cache and len(_cache_order) >= CACHE_MAX:

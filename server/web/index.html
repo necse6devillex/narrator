@@ -400,8 +400,8 @@
         const res = await fetch(eng.base + '/api/health', { signal: ctl.signal, cache: 'no-store' });
         const j = await res.json();
         if (j && j.neural === 'blocked') {
-          eng.state = 'down'; eng.reason = 'blocked';
-          eng.retryAt = Date.now() + Math.max(30, j.retry_after || 60) * 1000;
+          eng.state = 'down'; eng.reason = j.reason || 'blocked';
+          eng.retryAt = Date.now() + Math.max(5, j.retry_after || 30) * 1000;
         } else {
           eng.state = 'ok'; eng.fails = 0; eng.reason = '';
         }
@@ -430,11 +430,20 @@
     if (status && status >= 400 && status < 500 && status !== 429) return;
     eng.fails++;
     if (status === 503 || eng.fails >= 2 || !status) {
-      eng.state = 'down'; eng.reason = status === 503 ? 'blocked' : 'unreachable';
-      eng.retryAt = Date.now() + 60000;
+      eng.state = 'down';
+      eng.reason = (err && err.reason) || (status === 503 ? 'blocked' : 'unreachable');
+      eng.retryAt = Date.now() + (eng.reason === 'busy' ? 8000 : 60000);
       updateVoiceHint(); renderLibrary();
     }
   }
+
+  const WHY = {
+    blocked: 'Microsoft is turning this app\'s server away',
+    key: 'the voice service key isn\'t accepted',
+    busy: 'the voice service is busy for a moment',
+    unreachable: 'the voice server isn\'t responding',
+    error: 'the voice service had a problem',
+  };
 
   async function fetchBlobFromEngine(eng, text, voiceId) {
     const ctl = new AbortController();
@@ -446,7 +455,12 @@
         body: JSON.stringify({ text, voice: bareVoice(voiceId, eng) }),
         signal: ctl.signal,
       });
-      if (!res.ok) { const e = new Error('speak failed ' + res.status); e.status = res.status; throw e; }
+      if (!res.ok) {
+        const e = new Error('speak failed ' + res.status);
+        e.status = res.status;
+        try { const j = await res.json(); if (j && typeof j.detail === 'string') e.reason = j.detail; } catch (x) {}
+        throw e;
+      }
       return await res.blob();
     } finally {
       clearTimeout(timer);
@@ -509,7 +523,7 @@
       const eng = engineOf(sel);
       if (eng.state === 'down' && navigator.onLine) {
         warn = true; showCheck = true;
-        msg = voiceShort(sel) + ' can\'t be reached right now (' + (eng.reason === 'blocked' ? 'Microsoft is turning this app\'s server away' : 'the voice server isn\'t responding') + '). Saved audio and your device\'s voice still work.';
+        msg = voiceShort(sel) + ' can\'t be used right now (' + (WHY[eng.reason] || WHY.unreachable) + '). Saved audio and your device\'s voice still work.';
       }
     }
     voiceHint.hidden = !msg;
