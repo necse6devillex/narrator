@@ -372,7 +372,7 @@
     if (kokoro) safeSet('narrator.kokoroBase', kokoro);
     kokoro = kokoro || safeGet('narrator.kokoroBase') || DEFAULT_KOKORO_BASE;
     if (kokoro) {
-      ENGINES.push({ key: 'kokoro', base: kokoro.replace(/\/+$/, ''), prefix: 'k_', group: 'Natural voices (Kokoro)', prefetch: 2, workers: 2, speakTimeout: 90000, healthTimeout: 90000 });
+      ENGINES.push({ key: 'kokoro', base: kokoro.replace(/\/+$/, ''), prefix: 'k_', group: 'Natural voices (Kokoro)', prefetch: 3, workers: 2, speakTimeout: 90000, healthTimeout: 90000 });
     }
     ENGINES.push({ key: 'ms', base: '', prefix: '', group: 'Online voices (Microsoft)', prefetch: 3, workers: 3, speakTimeout: 40000, healthTimeout: 70000 });
     ENGINES.forEach((e) => { e.state = 'unknown'; e.retryAt = 0; e.fails = 0; e.reason = ''; e.checking = null; e.voices = []; });
