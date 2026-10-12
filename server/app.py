@@ -1,25 +1,43 @@
 import asyncio
+import hashlib
 import io
+import time
 from pathlib import Path
 
 import edge_tts
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 VOICES = {
-    "AriaNeural": {"id": "en-US-AriaNeural", "label": "Aria — expressive (US)"},
-    "JennyNeural": {"id": "en-US-JennyNeural", "label": "Jenny — warm, friendly (US)"},
-    "GuyNeural": {"id": "en-US-GuyNeural", "label": "Guy — clear (US)"},
-    "SoniaNeural": {"id": "en-GB-SoniaNeural", "label": "Sonia — (British)"},
-    "RyanNeural": {"id": "en-GB-RyanNeural", "label": "Ryan — (British)"},
-    "NatashaNeural": {"id": "en-AU-NatashaNeural", "label": "Natasha — (Australian)"},
+    "AriaNeural": {"id": "en-US-AriaNeural", "label": "Aria — female, expressive (US)"},
+    "JennyNeural": {"id": "en-US-JennyNeural", "label": "Jenny — female, warm (US)"},
+    "GuyNeural": {"id": "en-US-GuyNeural", "label": "Guy — male, clear (US)"},
+    "SoniaNeural": {"id": "en-GB-SoniaNeural", "label": "Sonia — female (UK)"},
+    "RyanNeural": {"id": "en-GB-RyanNeural", "label": "Ryan — male (UK)"},
+    "NatashaNeural": {"id": "en-AU-NatashaNeural", "label": "Natasha — female (Australia)"},
 }
 
 CACHE_MAX = 400
 _cache: dict[tuple[str, str], bytes] = {}
 _cache_order: list[tuple[str, str]] = []
+
+BLOCK_AFTER = 3
+BLOCK_SECONDS = 120
+
+
+class Upstream:
+    """Microsoft's free voice service sometimes refuses this server (HTTP 403).
+    Remember that, so the app finds out instantly instead of waiting on retries."""
+    state = "unknown"  # "ok" | "blocked" | "unknown"
+    fail_streak = 0
+    blocked_until = 0.0
+
+
+UP = Upstream()
+GATE = asyncio.Semaphore(2)
+PROBE_LOCK = asyncio.Lock()
 
 app = FastAPI()
 
@@ -29,9 +47,56 @@ class SpeakRequest(BaseModel):
     voice: str
 
 
+async def synth(text: str, voice_id: str, attempts: int = 2) -> bytes:
+    last = None
+    for a in range(attempts):
+        try:
+            buf = io.BytesIO()
+            async for chunk in edge_tts.Communicate(text, voice_id).stream():
+                if chunk["type"] == "audio":
+                    buf.write(chunk["data"])
+            data = buf.getvalue()
+            if data:
+                return data
+        except Exception as e:
+            last = e
+        if a + 1 < attempts:
+            await asyncio.sleep(0.25)
+    raise last or RuntimeError("no audio")
+
+
+def mark_ok():
+    UP.fail_streak = 0
+    UP.state = "ok"
+    UP.blocked_until = 0.0
+
+
+def mark_failed():
+    UP.fail_streak += 1
+    if UP.fail_streak >= BLOCK_AFTER:
+        UP.state = "blocked"
+        UP.blocked_until = time.time() + BLOCK_SECONDS
+
+
+async def probe():
+    async with PROBE_LOCK:
+        if UP.state == "ok" or (UP.state == "blocked" and time.time() < UP.blocked_until):
+            return
+        try:
+            await asyncio.wait_for(synth("Ready.", VOICES["AriaNeural"]["id"], attempts=3), timeout=10)
+            mark_ok()
+        except Exception:
+            UP.fail_streak = max(UP.fail_streak, BLOCK_AFTER)
+            UP.state = "blocked"
+            UP.blocked_until = time.time() + BLOCK_SECONDS
+
+
 @app.get("/api/health")
-def health():
-    return {"ready": True}
+async def health():
+    if UP.state == "unknown" or (UP.state == "blocked" and time.time() >= UP.blocked_until):
+        await probe()
+    retry = max(0, int(UP.blocked_until - time.time())) if UP.state == "blocked" else 0
+    return {"ready": True, "neural": UP.state, "retry_after": retry}
 
 
 @app.get("/api/voices")
@@ -52,24 +117,17 @@ async def speak(req: SpeakRequest):
     if cached is not None:
         return Response(content=cached, media_type="audio/mpeg")
 
-    audio_bytes = b""
-    last_error = None
-    for attempt in range(5):
+    now = time.time()
+    if UP.state == "blocked" and now < UP.blocked_until:
+        raise HTTPException(503, "voices-blocked", headers={"Retry-After": str(int(UP.blocked_until - now) + 1)})
+
+    async with GATE:
         try:
-            communicate = edge_tts.Communicate(text, VOICES[req.voice]["id"])
-            buf = io.BytesIO()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    buf.write(chunk["data"])
-            audio_bytes = buf.getvalue()
-            if audio_bytes:
-                break
-        except Exception as e:
-            last_error = e
-        if attempt < 4:
-            await asyncio.sleep(0.5 * (attempt + 1))
-    if not audio_bytes:
-        raise HTTPException(502, f"Voice service unavailable: {last_error}")
+            audio_bytes = await asyncio.wait_for(synth(text, VOICES[req.voice]["id"]), timeout=25)
+        except Exception:
+            mark_failed()
+            raise HTTPException(502, "voice-service-error")
+    mark_ok()
 
     if key not in _cache and len(_cache_order) >= CACHE_MAX:
         oldest = _cache_order.pop(0)
@@ -80,45 +138,24 @@ async def speak(req: SpeakRequest):
     return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
-@app.get("/api/diag")
-async def diag():
-    import datetime, platform, time as _t
-    import aiohttp
-    from edge_tts.drm import DRM
-    out = {"python": platform.python_version(), "edge_tts": getattr(edge_tts, "__version__", "?"),
-           "aiohttp": aiohttp.__version__, "server_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()}
-    try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get("https://api.ipify.org?format=json", timeout=aiohttp.ClientTimeout(total=8)) as r:
-                out["egress_ip"] = await r.text()
-            async with s.get("https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4",
-                             timeout=aiohttp.ClientTimeout(total=8)) as r:
-                out["voices_list_status"] = r.status
-                out["ms_date_header"] = r.headers.get("Date")
-    except Exception as e:
-        out["net_error"] = str(e)[:200]
-    results = []
-    for i in range(8):
-        t0 = _t.time()
-        try:
-            n = 0
-            async for ch in edge_tts.Communicate(f"Diagnostic sentence number {i}, hello there.", "en-US-JennyNeural").stream():
-                if ch["type"] == "audio":
-                    n += len(ch["data"])
-            results.append({"ok": n > 0, "bytes": n, "secs": round(_t.time() - t0, 2)})
-        except Exception as e:
-            results.append({"ok": False, "err": str(e)[:90], "secs": round(_t.time() - t0, 2)})
-    out["attempts"] = results
-    out["skew_seconds"] = DRM.clock_skew_seconds
-    return out
-
-
 WEB_DIR = Path(__file__).parent / "web"
+
+
+def build_id() -> str:
+    h = hashlib.sha1()
+    for name in ("index.html", "extract.js", "sw.js"):
+        h.update((WEB_DIR / name).read_bytes())
+    return h.hexdigest()[:10]
+
+
+@app.get("/api/version")
+def version():
+    return JSONResponse({"build": build_id()}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8").replace("__BUILD__", build_id())
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 

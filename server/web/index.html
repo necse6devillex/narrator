@@ -28,6 +28,7 @@
     --shadow: 0 0 0;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     margin: 0;
     background: var(--bg);
@@ -35,7 +36,7 @@
     font-family: 'Work Sans', system-ui, sans-serif;
     display: flex;
     justify-content: center;
-    padding: 2.5rem 1.25rem 12rem;
+    padding: 2.5rem 1.25rem 13rem;
   }
   main { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 1.5rem; }
   header { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -43,6 +44,11 @@
   .brand svg { flex: none; color: var(--accent); }
   .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
   .offline-pill { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 0.2rem 0.65rem; }
+  .update-chip {
+    align-self: flex-start; font-size: 0.8125rem; padding: 0.4rem 0.8rem; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
   h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 2.25rem; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
   .sub { color: var(--ink-soft); font-size: 0.9375rem; line-height: 1.55; max-width: 48ch; margin: 0; }
   .manuscript {
@@ -59,14 +65,17 @@
     padding: 1.6rem 1.6rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
     line-height: 1.75; color: var(--ink); background: transparent;
   }
+  #storyInput:read-only { color: var(--ink-soft); resize: none; }
   #storyInput::placeholder { color: var(--ink-faint); font-style: italic; }
   #storyInput:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   #readingView {
     padding: 1.6rem 1.6rem 1rem; font-family: 'Fraunces', Georgia, serif; font-size: 1.1rem;
     line-height: 1.75;
   }
-  #readingView p { margin: 0 0 1.1em; text-wrap: pretty; }
+  #readingView p { margin: 0 0 1.1em; }
   #readingView p:last-child { margin-bottom: 0; }
+  .more-btn { display: block; margin: 0 0 1.1rem -0.65rem; }
+  .more-end { color: var(--ink-faint); margin-top: 1.1rem; }
   .chunk { transition: background 0.2s ease, box-shadow 0.2s ease; border-radius: 3px; }
   .chunk.active { background: color-mix(in srgb, var(--accent) 24%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent); }
   .chunk.done { color: var(--ink-soft); }
@@ -74,8 +83,8 @@
     display: flex; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap;
     padding: 0.55rem 0.8rem 0.65rem 1.6rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--ink-soft);
   }
-  .meta-row .meta-text { display: flex; gap: 0.6rem; align-items: baseline; font-variant-numeric: tabular-nums; }
-  .meta-row .meta-text span:last-child:not(:empty)::before { content: '·'; margin-right: 0.6rem; }
+  .meta-row .meta-text { display: flex; flex-wrap: wrap; gap: 0 0.6rem; align-items: baseline; font-variant-numeric: tabular-nums; }
+  .meta-row .meta-text span:not(:first-child):not(:empty)::before { content: '·'; margin-right: 0.6rem; }
   .meta-actions { display: flex; gap: 0.15rem; align-items: center; }
   .ghost-btn {
     font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.8125rem; font-weight: 600;
@@ -120,6 +129,9 @@
   .field label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
   select { font: inherit; font-family: 'Work Sans', sans-serif; font-size: 0.9375rem; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.7rem; max-width: 100%; }
   select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .voice-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem 0.5rem; font-size: 0.78rem; line-height: 1.45; color: var(--ink-soft); margin-top: -0.3rem; }
+  .voice-hint.warn { color: var(--warn); }
+  .voice-hint .ghost-btn { padding: 0.15rem 0.5rem; font-size: 0.78rem; color: var(--accent); }
   .rate-control { display: flex; align-items: center; gap: 0.6rem; }
   input[type="range"] { flex: 1; accent-color: var(--accent); }
   .rate-value { font-variant-numeric: tabular-nums; font-size: 0.875rem; min-width: 2.6em; text-align: right; }
@@ -136,11 +148,13 @@
   .icon-btn { background: transparent; color: var(--ink-soft); border-color: var(--border); padding: 0.6rem; }
   .icon-btn:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
   .ghost-btn, .ghost-btn:active { padding: 0.45rem 0.65rem; border-radius: 8px; font-size: 0.8125rem; }
-  .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem 0.35rem 0.6rem; max-width: 100%; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-soft); flex: none; }
   .status.playing { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
   .status.playing .dot { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
   .status.busy .dot { background: var(--accent); animation: pulse 0.6s ease-in-out infinite; }
+  .status.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+  .status.warn .dot { background: var(--warn); }
   @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
   @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.5; } }
   .progress-wrap { padding: 9px 0; cursor: pointer; touch-action: none; }
@@ -169,13 +183,14 @@
     </div>
     <h1>Narrator</h1>
     <p class="sub">Paste text or add a PDF, EPUB or Word file, then press play. Save a story to this device and download its audio to listen with no internet at all.</p>
+    <button class="update-chip" id="updateChip" type="button" hidden>A new version is ready — tap to reload</button>
   </header>
 
   <div class="manuscript" id="manuscript">
     <textarea id="storyInput" spellcheck="false" placeholder="Paste your story here, or add a file…"></textarea>
     <div id="readingView" hidden aria-live="off"></div>
     <div class="meta-row">
-      <span class="meta-text"><span id="wordCount">0 words</span><span id="timeEstimate"></span></span>
+      <span class="meta-text"><span id="wordCount">0 words</span><span id="timeEstimate"></span><span id="longTag"></span></span>
       <span class="meta-actions">
         <button class="ghost-btn strong" id="addFileBtn" type="button">Add file</button>
         <button class="ghost-btn" id="saveBtn" type="button">Save</button>
@@ -207,6 +222,7 @@
           </div>
         </div>
       </div>
+      <div class="voice-hint" id="voiceHint" hidden></div>
       <div class="dock-row">
         <div class="transport">
           <button id="prevBtn" class="icon-btn" disabled aria-label="Previous sentence">
@@ -239,7 +255,7 @@
   </div>
 
   <footer>
-    Stories you save here, with audio downloaded, play with no internet. Without internet, anything else is read in your device's own built-in voice. Online, the first line may take up to a minute if the server has been idle.
+    Stories you save here keep the voice they were downloaded in and play with no internet. Anything without saved audio is read by the voice you pick when the online voice service can be reached, and by your device's own voice when it can't.
   </footer>
 </main>
 
@@ -247,39 +263,52 @@
 <script>
   const ICON_PLAY = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.3v11.4c0 .8.9 1.3 1.6.9l9-5.7a1 1 0 0 0 0-1.7l-9-5.7C4.9 1 4 1.5 4 2.3z"/></svg>';
   const ICON_PAUSE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>';
-  const FALLBACK_VOICES = [
-    { id: 'AriaNeural', label: 'Aria — expressive (US)' },
-    { id: 'JennyNeural', label: 'Jenny — warm, friendly (US)' },
-    { id: 'GuyNeural', label: 'Guy — clear (US)' },
-    { id: 'SoniaNeural', label: 'Sonia — (British)' },
-    { id: 'RyanNeural', label: 'Ryan — (British)' },
-    { id: 'NatashaNeural', label: 'Natasha — (Australian)' },
+
+  /* Second voice server (natural Kokoro voices). Set once it exists; ?kokoro=https://… also works for testing. */
+  const DEFAULT_KOKORO_BASE = '';
+
+  const MS_FALLBACK_VOICES = [
+    { id: 'AriaNeural', label: 'Aria — female, expressive (US)' },
+    { id: 'JennyNeural', label: 'Jenny — female, warm (US)' },
+    { id: 'GuyNeural', label: 'Guy — male, clear (US)' },
+    { id: 'SoniaNeural', label: 'Sonia — female (UK)' },
+    { id: 'RyanNeural', label: 'Ryan — male (UK)' },
+    { id: 'NatashaNeural', label: 'Natasha — female (Australia)' },
   ];
+  const LONG_CHARS = 60000;
+  const FULL_RENDER_CHUNKS = 900;
 
   const $ = (id) => document.getElementById(id);
   const storyInput = $('storyInput'), readingView = $('readingView'), manuscript = $('manuscript');
   const clearBtn = $('clearBtn'), saveBtn = $('saveBtn'), exportBtn = $('exportBtn'), addFileBtn = $('addFileBtn'), fileInput = $('fileInput'), fileNote = $('fileNote');
-  const voiceSelect = $('voiceSelect'), rateInput = $('rateInput'), rateValue = $('rateValue');
+  const voiceSelect = $('voiceSelect'), voiceHint = $('voiceHint'), rateInput = $('rateInput'), rateValue = $('rateValue');
   const playBtn = $('playBtn'), playIcon = $('playIcon'), playLabel = $('playLabel'), stopBtn = $('stopBtn');
   const prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
   const statusPill = $('statusPill'), statusText = $('statusText');
   const progressWrap = $('progressWrap'), progressFill = $('progressFill'), progressThumb = $('progressThumb');
-  const wordCountEl = $('wordCount'), timeEstimateEl = $('timeEstimate');
-  const offlinePill = $('offlinePill'), libList = $('libList');
+  const wordCountEl = $('wordCount'), timeEstimateEl = $('timeEstimate'), longTag = $('longTag');
+  const offlinePill = $('offlinePill'), libList = $('libList'), updateChip = $('updateChip');
 
   playIcon.innerHTML = ICON_PLAY;
 
   let chunks = [];
+  let paraList = [];
+  let chunkPara = [];
+  let win = { a: 0, b: 0 };
   let idx = 0;
   let playing = false;
   let paused = false;
   let audioEl = null;
   let audioIdx = -1;
   let usingDevice = false;
+  let substitution = null;
   let currentTitle = '';
+  let currentItemId = null;
   let playToken = 0;
   let consecutiveFailures = 0;
-  let netBackoffUntil = 0;
+  let longMode = false;
+  let docText = '';
+  let docWords = 0;
   const sources = new Map();
 
   function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -335,22 +364,208 @@
   const idbDel = (s, k) => tx(s, 'readwrite', (st) => st.delete(k));
   const idbAll = (s) => tx(s, 'readonly', (st) => st.getAll());
 
-  /* ---------- text / meta ---------- */
-  function updateMeta() {
-    const count = wordsIn(storyInput.value);
-    wordCountEl.textContent = count === 1 ? '1 word' : count.toLocaleString() + ' words';
-    const minutes = count / 140;
-    timeEstimateEl.textContent = count === 0 ? '' : (minutes < 1 ? 'under 1 min to listen' : '~' + Math.round(minutes) + ' min to listen');
+  /* ---------- voice servers ("engines") ---------- */
+  const ENGINES = [];
+  (function setupEngines() {
+    let kokoro = '';
+    try { kokoro = new URLSearchParams(location.search).get('kokoro') || ''; } catch (e) {}
+    if (kokoro) safeSet('narrator.kokoroBase', kokoro);
+    kokoro = kokoro || safeGet('narrator.kokoroBase') || DEFAULT_KOKORO_BASE;
+    if (kokoro) {
+      ENGINES.push({ key: 'kokoro', base: kokoro.replace(/\/+$/, ''), prefix: 'k_', group: 'Natural voices (Kokoro)', prefetch: 2, workers: 2, speakTimeout: 90000, healthTimeout: 90000 });
+    }
+    ENGINES.push({ key: 'ms', base: '', prefix: '', group: 'Online voices (Microsoft)', prefetch: 3, workers: 3, speakTimeout: 40000, healthTimeout: 70000 });
+    ENGINES.forEach((e) => { e.state = 'unknown'; e.retryAt = 0; e.fails = 0; e.reason = ''; e.checking = null; e.voices = []; });
+  })();
+  const msEngine = ENGINES.find((e) => e.key === 'ms');
+  function engineOf(voiceId) {
+    return ENGINES.find((e) => e.prefix && voiceId.startsWith(e.prefix)) || msEngine;
+  }
+  const bareVoice = (voiceId, eng) => (eng.prefix && voiceId.startsWith(eng.prefix) ? voiceId.slice(eng.prefix.length) : voiceId);
+  const allVoices = () => ENGINES.flatMap((e) => e.voices);
+  function voiceLabel(voiceId) { const v = allVoices().find((x) => x.id === voiceId); return v ? v.label : voiceId; }
+  function voiceShort(voiceId) { return voiceLabel(voiceId).split(' — ')[0]; }
+
+  function engineBlocked(eng) { return eng.state === 'down' && Date.now() < eng.retryAt; }
+
+  async function checkHealth(eng) {
+    if (eng.checking) return eng.checking;
+    if (!navigator.onLine) { eng.state = 'down'; eng.retryAt = Date.now() + 5000; eng.reason = 'offline'; updateVoiceHint(); return; }
+    eng.state = eng.state === 'ok' ? 'ok' : 'checking';
+    updateVoiceHint();
+    eng.checking = (async () => {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), eng.healthTimeout);
+      try {
+        const res = await fetch(eng.base + '/api/health', { signal: ctl.signal, cache: 'no-store' });
+        const j = await res.json();
+        if (j && j.neural === 'blocked') {
+          eng.state = 'down'; eng.reason = 'blocked';
+          eng.retryAt = Date.now() + Math.max(30, j.retry_after || 60) * 1000;
+        } else {
+          eng.state = 'ok'; eng.fails = 0; eng.reason = '';
+        }
+      } catch (e) {
+        eng.state = 'down'; eng.reason = navigator.onLine ? 'unreachable' : 'offline';
+        eng.retryAt = Date.now() + 30000;
+      } finally {
+        clearTimeout(timer);
+        eng.checking = null;
+        updateVoiceHint();
+        renderLibrary();
+      }
+    })();
+    return eng.checking;
   }
 
+  async function ensureEngine(eng) {
+    if (eng.checking) await eng.checking;
+    else if (eng.state === 'unknown' || (eng.state === 'down' && Date.now() >= eng.retryAt)) await checkHealth(eng);
+    return eng.state === 'ok';
+  }
+
+  function markEngineOk(eng) { eng.fails = 0; if (eng.state !== 'ok') { eng.state = 'ok'; eng.reason = ''; updateVoiceHint(); renderLibrary(); } }
+  function markEngineFailure(eng, err) {
+    const status = err && err.status;
+    if (status && status >= 400 && status < 500 && status !== 429) return;
+    eng.fails++;
+    if (status === 503 || eng.fails >= 2 || !status) {
+      eng.state = 'down'; eng.reason = status === 503 ? 'blocked' : 'unreachable';
+      eng.retryAt = Date.now() + 60000;
+      updateVoiceHint(); renderLibrary();
+    }
+  }
+
+  async function fetchBlobFromEngine(eng, text, voiceId) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), eng.speakTimeout);
+    try {
+      const res = await fetch(eng.base + '/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: bareVoice(voiceId, eng) }),
+        signal: ctl.signal,
+      });
+      if (!res.ok) { const e = new Error('speak failed ' + res.status); e.status = res.status; throw e; }
+      return await res.blob();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function populateVoices() {
+    const keep = voiceSelect.value || safeGet('narrator.voice');
+    voiceSelect.innerHTML = '';
+    ENGINES.forEach((eng) => {
+      if (!eng.voices.length) return;
+      const g = document.createElement('optgroup');
+      g.label = eng.group;
+      eng.voices.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.label;
+        g.appendChild(opt);
+      });
+      voiceSelect.appendChild(g);
+    });
+    const ids = allVoices().map((v) => v.id);
+    if (keep && ids.includes(keep)) voiceSelect.value = keep;
+    updateVoiceHint();
+  }
+
+  async function loadVoices() {
+    ENGINES.forEach((eng) => {
+      let cached = null;
+      try { cached = JSON.parse(safeGet('narrator.voices.' + eng.key) || 'null'); } catch (e) {}
+      if (Array.isArray(cached) && cached.length) eng.voices = cached;
+      else if (eng.key === 'ms') eng.voices = MS_FALLBACK_VOICES.slice();
+    });
+    populateVoices();
+    ENGINES.forEach(async (eng) => {
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 20000);
+        const res = await fetch(eng.base + '/api/voices', { signal: ctl.signal });
+        clearTimeout(timer);
+        const list = await res.json();
+        if (Array.isArray(list) && list.length) {
+          eng.voices = list.map((v) => ({ id: eng.prefix + v.id, label: v.label }));
+          safeSet('narrator.voices.' + eng.key, JSON.stringify(eng.voices));
+          populateVoices();
+          renderLibrary();
+        }
+      } catch (e) {}
+    });
+  }
+
+  function updateVoiceHint() {
+    const sel = voiceSelect.value;
+    let msg = '';
+    let warn = false;
+    let showCheck = false;
+    if (substitution) {
+      msg = substitution.text; warn = true;
+    } else if (sel) {
+      const eng = engineOf(sel);
+      if (eng.state === 'down' && navigator.onLine) {
+        warn = true; showCheck = true;
+        msg = voiceShort(sel) + ' can\'t be reached right now (' + (eng.reason === 'blocked' ? 'Microsoft is turning this app\'s server away' : 'the voice server isn\'t responding') + '). Saved audio and your device\'s voice still work.';
+      }
+    }
+    voiceHint.hidden = !msg;
+    voiceHint.className = 'voice-hint' + (warn ? ' warn' : '');
+    voiceHint.textContent = msg;
+    if (showCheck) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'ghost-btn'; b.textContent = 'Check again';
+      b.addEventListener('click', () => { const eng = engineOf(voiceSelect.value); eng.state = 'unknown'; checkHealth(eng); });
+      voiceHint.appendChild(b);
+    }
+  }
+
+  function setSubstitution(src) {
+    let next = null;
+    if (src.kind === 'device') next = { text: 'Reading with your device\'s own voice because ' + voiceShort(voiceSelect.value) + ' isn\'t available right now.' };
+    else if (src.voice && src.voice !== voiceSelect.value) next = { text: 'Playing ' + voiceShort(src.voice) + ' instead — ' + voiceShort(voiceSelect.value) + ' isn\'t available right now.' };
+    if ((next && next.text) !== (substitution && substitution.text)) { substitution = next; updateVoiceHint(); }
+  }
+
+  /* ---------- text / meta ---------- */
+  const getText = () => (longMode ? docText : storyInput.value);
+
+  function updateMeta() {
+    const count = longMode ? docWords : wordsIn(storyInput.value);
+    wordCountEl.textContent = count === 1 ? '1 word' : count.toLocaleString() + ' words';
+    const minutes = count / 140;
+    timeEstimateEl.textContent = count === 0 ? '' : (minutes < 1 ? 'under 1 min to listen' : minutes >= 90 ? '~' + (minutes / 60).toFixed(1) + ' hours to listen' : '~' + Math.round(minutes) + ' min to listen');
+    longTag.textContent = longMode ? 'long document — editing is off' : '';
+  }
+
+  function resetChunks() { chunks = []; paraList = []; chunkPara = []; win = { a: 0, b: 0 }; readingView.innerHTML = ''; }
+
   function setStoryText(text, title) {
-    chunks = [];
+    resetChunks();
     currentTitle = title || '';
-    storyInput.value = text;
+    currentItemId = null;
+    if (text.length > LONG_CHARS) {
+      longMode = true; docText = text; docWords = wordsIn(text);
+      storyInput.readOnly = true;
+      storyInput.value = text.slice(0, 1200).trim() + '\n\n…';
+    } else {
+      longMode = false; docText = ''; docWords = 0;
+      storyInput.readOnly = false;
+      storyInput.value = text;
+    }
     updateMeta();
   }
 
-  storyInput.addEventListener('input', () => { chunks = []; updateMeta(); });
+  storyInput.addEventListener('input', () => {
+    if (longMode) return;
+    if (storyInput.value.length > LONG_CHARS) { setStoryText(storyInput.value, currentTitle); return; }
+    resetChunks();
+    currentItemId = null;
+    updateMeta();
+  });
   clearBtn.addEventListener('click', () => {
     if (playing) setIdleUI();
     setStoryText('', '');
@@ -374,42 +589,30 @@
     if (audioEl) audioEl.playbackRate = parseFloat(rateInput.value);
   });
 
-  function populateVoices(list) {
-    const keep = voiceSelect.value || safeGet('narrator.voice');
-    voiceSelect.innerHTML = '';
-    list.forEach((v) => {
-      const opt = document.createElement('option');
-      opt.value = v.id;
-      opt.textContent = v.label;
-      voiceSelect.appendChild(opt);
-    });
-    if (keep && list.some((v) => v.id === keep)) voiceSelect.value = keep;
-  }
-  async function loadVoices() {
-    let cached = null;
-    try { cached = JSON.parse(safeGet('narrator.voices') || 'null'); } catch (e) {}
-    populateVoices(Array.isArray(cached) && cached.length ? cached : FALLBACK_VOICES);
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), 8000);
-      const res = await fetch('/api/voices', { signal: ctl.signal });
-      clearTimeout(timer);
-      const list = await res.json();
-      if (Array.isArray(list) && list.length) {
-        safeSet('narrator.voices', JSON.stringify(list));
-        populateVoices(list);
-      }
-    } catch (e) {}
-  }
-  voiceSelect.addEventListener('change', () => safeSet('narrator.voice', voiceSelect.value));
+  voiceSelect.addEventListener('change', () => {
+    safeSet('narrator.voice', voiceSelect.value);
+    substitution = null;
+    updateVoiceHint();
+    renderLibrary();
+    const eng = engineOf(voiceSelect.value);
+    if (eng.state === 'unknown' || (eng.state === 'down' && Date.now() >= eng.retryAt)) checkHealth(eng);
+    if (playing) {
+      dropSources();
+      if (audioEl) { audioEl.pause(); audioEl = null; audioIdx = -1; }
+      stopDeviceVoice();
+      if (!paused) playChunk(idx);
+    }
+  });
 
   function updateOnlineUI() {
     const off = !navigator.onLine;
     offlinePill.hidden = !off;
     if (!playing) statusText.textContent = off ? 'Offline — saved audio still plays' : 'Ready';
+    if (!off) ENGINES.forEach((e) => { if (e.state === 'down' && e.reason === 'offline') e.state = 'unknown'; });
+    updateVoiceHint();
     renderLibrary();
   }
-  window.addEventListener('online', updateOnlineUI);
+  window.addEventListener('online', () => { updateOnlineUI(); checkHealth(engineOf(voiceSelect.value)); });
   window.addEventListener('offline', updateOnlineUI);
 
   /* ---------- chunking ---------- */
@@ -435,17 +638,80 @@
     return result;
   }
 
-  function renderReadingView() {
-    let html = ''; let lastPara = -1;
-    chunks.forEach((c, i) => {
-      if (c.para !== lastPara) { if (lastPara !== -1) html += '</p>'; html += '<p>'; lastPara = c.para; }
-      html += '<span class="chunk" id="chunk-' + i + '">' + escapeHtml(c.text) + ' </span>';
-    });
-    html += '</p>';
-    readingView.innerHTML = html;
+  function setChunks(arr) {
+    chunks = arr;
+    paraList = []; chunkPara = new Array(arr.length);
+    let last = -1;
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i].para !== last) { paraList.push({ first: i, last: i }); last = arr[i].para; }
+      paraList[paraList.length - 1].last = i;
+      chunkPara[i] = paraList.length - 1;
+    }
+  }
+
+  /* The reading view only holds a window of paragraphs, so very long books open instantly. */
+  function paraHtml(k, doneBefore) {
+    const p = paraList[k];
+    let h = '<p>';
+    for (let i = p.first; i <= p.last; i++) {
+      h += '<span class="chunk' + (i < doneBefore ? ' done' : '') + '" id="chunk-' + i + '">' + escapeHtml(chunks[i].text) + ' </span>';
+    }
+    return h + '</p>';
+  }
+  const EARLIER_BTN = '<button type="button" class="ghost-btn more-btn" data-act="earlier">Show earlier text</button>';
+
+  function renderWindow(center) {
+    const P = paraList.length;
+    let a = 0, b = P;
+    if (chunks.length > FULL_RENDER_CHUNKS && P) {
+      const k = chunkPara[Math.min(Math.max(center, 0), chunks.length - 1)];
+      a = Math.max(0, k - 12); b = Math.min(P, k + 60);
+    }
+    let h = a > 0 ? EARLIER_BTN : '';
+    for (let k = a; k < b; k++) h += paraHtml(k, center);
+    if (b < P) h += '<div class="more-end">…</div>';
+    readingView.innerHTML = h;
+    win = { a, b };
+  }
+
+  function extendForward() {
+    const P = paraList.length;
+    const to = Math.min(P, win.b + 40);
+    let h = '';
+    for (let k = win.b; k < to; k++) h += paraHtml(k, idx);
+    const end = readingView.querySelector('.more-end');
+    if (end) end.remove();
+    readingView.insertAdjacentHTML('beforeend', h + (to < P ? '<div class="more-end">…</div>' : ''));
+    win.b = to;
+  }
+
+  function showEarlier() {
+    const from = Math.max(0, win.a - 40);
+    let h = from > 0 ? EARLIER_BTN : '';
+    for (let k = from; k < win.a; k++) h += paraHtml(k, Infinity);
+    const anchor = readingView.querySelector('p');
+    const before = anchor ? anchor.getBoundingClientRect().top : 0;
+    const btn = readingView.querySelector('.more-btn');
+    if (btn) btn.remove();
+    readingView.insertAdjacentHTML('afterbegin', h);
+    const after = anchor ? anchor.getBoundingClientRect().top : 0;
+    window.scrollBy(0, after - before);
+    win.a = from;
+  }
+  readingView.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-act="earlier"]');
+    if (b) showEarlier();
+  });
+
+  function ensureRendered(i) {
+    if (!readingView.firstChild) { renderWindow(i); return; }
+    const k = chunkPara[i];
+    if (k < win.a || k >= win.b) renderWindow(i);
+    else if (win.b < paraList.length && k >= win.b - 10) extendForward();
   }
 
   function highlight(i) {
+    ensureRendered(i);
     const prevActive = readingView.querySelector('.chunk.active');
     if (prevActive) { prevActive.classList.remove('active'); prevActive.classList.add('done'); }
     const el = document.getElementById('chunk-' + i);
@@ -466,52 +732,67 @@
 
   function ensureChunks() {
     if (!chunks.length) {
-      if (!storyInput.value.trim()) return false;
-      chunks = buildChunks(storyInput.value);
+      if (!getText().trim()) return false;
+      setChunks(buildChunks(getText()));
       if (!chunks.length) return false;
-      renderReadingView();
+      renderWindow(0);
     }
     return true;
   }
 
-  /* ---------- audio sources: stored on device → server → device voice ---------- */
-  class OfflineError extends Error { constructor() { super('offline'); this.name = 'OfflineError'; } }
-
-  async function fetchBlobFromServer(text, voice) {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 70000);
+  /* ---------- audio: saved on device → selected voice → saved in another voice → other server → device voice ---------- */
+  async function storedUrl(voiceId, text) {
     try {
-      const res = await fetch('/api/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice }),
-        signal: ctl.signal,
-      });
-      if (!res.ok) throw new Error('speak failed ' + res.status);
-      return await res.blob();
-    } finally {
-      clearTimeout(timer);
+      const stored = await idbGet('audio', audioKey(voiceId, text));
+      if (stored && stored.blob) return URL.createObjectURL(stored.blob);
+    } catch (e) {}
+    return null;
+  }
+
+  function activeItem() { return currentItemId == null ? null : libItems.find((it) => it.id === currentItemId) || null; }
+
+  async function getChunkAudio(text) {
+    const voice = voiceSelect.value;
+    const own = await storedUrl(voice, text);
+    if (own) return { kind: 'audio', url: own, voice };
+
+    const eng = engineOf(voice);
+    if (navigator.onLine) {
+      if (await ensureEngine(eng)) {
+        try {
+          const blob = await fetchBlobFromEngine(eng, text, voice);
+          markEngineOk(eng);
+          return { kind: 'audio', url: URL.createObjectURL(blob), voice };
+        } catch (e) { markEngineFailure(eng, e); }
+      }
     }
+
+    const item = activeItem();
+    if (item) {
+      for (const v of Object.keys(item.downloads || {})) {
+        if (v === voice) continue;
+        const u = await storedUrl(v, text);
+        if (u) return { kind: 'audio', url: u, voice: v };
+      }
+    }
+    if (navigator.onLine) {
+      for (const other of ENGINES) {
+        if (other === eng || !other.voices.length || other.state === 'down') continue;
+        if (!(await ensureEngine(other))) continue;
+        const v = other.voices[0].id;
+        try {
+          const blob = await fetchBlobFromEngine(other, text, v);
+          markEngineOk(other);
+          return { kind: 'audio', url: URL.createObjectURL(blob), voice: v };
+        } catch (e) { markEngineFailure(other, e); }
+      }
+    }
+    throw new Error('no neural audio');
   }
 
   function resolveChunk(i) {
     if (sources.has(i)) return sources.get(i);
-    const text = chunks[i].text;
-    const voice = voiceSelect.value;
-    const p = (async () => {
-      try {
-        const stored = await idbGet('audio', audioKey(voice, text));
-        if (stored && stored.blob) return { kind: 'audio', url: URL.createObjectURL(stored.blob) };
-      } catch (e) {}
-      if (!navigator.onLine || Date.now() < netBackoffUntil) throw new OfflineError();
-      try {
-        const blob = await fetchBlobFromServer(text, voice);
-        return { kind: 'audio', url: URL.createObjectURL(blob) };
-      } catch (e) {
-        if (e instanceof TypeError || e.name === 'AbortError') netBackoffUntil = Date.now() + 20000;
-        throw e;
-      }
-    })();
+    const p = getChunkAudio(chunks[i].text);
     sources.set(i, p);
     p.catch(() => sources.delete(i));
     return p;
@@ -556,7 +837,7 @@
     playBtn.setAttribute('aria-pressed', 'false');
     stopBtn.disabled = true;
     prevBtn.disabled = true; nextBtn.disabled = true;
-    statusPill.classList.remove('playing', 'busy');
+    statusPill.classList.remove('playing', 'busy', 'warn');
     statusText.textContent = message || (navigator.onLine ? 'Ready' : 'Offline — saved audio still plays');
     progressFill.style.width = '0%';
     progressThumb.style.left = '0%';
@@ -566,6 +847,8 @@
     audioIdx = -1;
     stopDeviceVoice();
     dropSources();
+    substitution = null;
+    updateVoiceHint();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
   }
 
@@ -580,6 +863,13 @@
     } catch (e) {}
   }
 
+  function readingLabel(i, src) {
+    let s = 'Reading — sentence ' + (i + 1).toLocaleString() + ' of ' + chunks.length.toLocaleString();
+    if (src.kind === 'device') s += ' · device voice';
+    else if (src.voice && src.voice !== voiceSelect.value) s += ' · ' + voiceShort(src.voice);
+    return s;
+  }
+
   async function playChunk(i) {
     if (!playing) return;
     if (i >= chunks.length) { setIdleUI(); return; }
@@ -590,7 +880,8 @@
     updateSkipButtons();
     dropSources((k) => k >= i - 6 && k <= i + 6);
     statusPill.classList.add('busy');
-    statusText.textContent = 'Generating…';
+    const selEng = engineOf(voiceSelect.value);
+    statusText.textContent = (selEng.checking || selEng.state === 'checking') ? 'Contacting the voice service… (up to a minute if it was asleep)' : 'Generating…';
     let src;
     try {
       src = await resolveChunk(i);
@@ -613,7 +904,9 @@
     if (!playing || token !== playToken) return;
     statusPill.classList.remove('busy');
     statusPill.classList.add('playing');
-    statusText.textContent = 'Reading — sentence ' + (i + 1) + ' of ' + chunks.length + (src.kind === 'device' ? ' · device voice' : '');
+    statusPill.classList.toggle('warn', src.kind === 'device' || (src.voice && src.voice !== voiceSelect.value));
+    statusText.textContent = readingLabel(i, src);
+    setSubstitution(src);
     if (audioEl) audioEl.pause();
     if (src.kind === 'device') {
       usingDevice = true; audioEl = null; audioIdx = -1;
@@ -633,7 +926,8 @@
       });
     }
     updateMediaSession('playing');
-    for (let j = i + 1; j <= i + 3 && j < chunks.length; j++) resolveChunk(j).catch(() => {});
+    const ahead = engineOf(voiceSelect.value).prefetch;
+    for (let j = i + 1; j <= i + ahead && j < chunks.length; j++) resolveChunk(j).catch(() => {});
   }
 
   function seekTo(i) {
@@ -670,9 +964,11 @@
   nextBtn.addEventListener('click', () => seekTo(idx + 1));
 
   function startPlaying() {
-    chunks = buildChunks(storyInput.value);
+    const text = getText();
+    setChunks(buildChunks(text));
     if (!chunks.length) { note('Nothing to read yet — paste some text or add a file first.', true); return; }
-    renderReadingView();
+    if (currentItemId == null) { const same = libItems.find((it) => it.text === text.trim()); currentItemId = same ? same.id : null; }
+    renderWindow(0);
     storyInput.hidden = true;
     readingView.hidden = false;
     playing = true; paused = false;
@@ -700,7 +996,7 @@
       if (liveAudio) {
         audioEl.play().catch(() => {});
         statusPill.classList.add('playing');
-        statusText.textContent = 'Reading — sentence ' + (idx + 1) + ' of ' + chunks.length;
+        statusText.textContent = 'Reading — sentence ' + (idx + 1).toLocaleString() + ' of ' + chunks.length.toLocaleString();
         updateMediaSession('playing');
       } else {
         playChunk(idx);
@@ -755,9 +1051,19 @@
   const exportJobs = new Map();
   const activeJob = (id) => downloads.get(id) || exportJobs.get(id);
 
+  function normalizeItem(it) {
+    if (!it.downloads) {
+      it.downloads = {};
+      if (it.offlineVoice && it.offlineTotal) it.downloads[it.offlineVoice] = { count: it.offlineCount || 0, total: it.offlineTotal, bytes: it.offlineBytes || 0 };
+    }
+    return it;
+  }
+  const dlOf = (item, voice) => item.downloads[voice] || { count: 0, total: 0, bytes: 0 };
+  const isFull = (d) => d.total > 0 && d.count >= d.total;
+
   async function refreshLibrary() {
     try {
-      libItems = (await idbAll('items')).sort((a, b) => b.createdAt - a.createdAt);
+      libItems = (await idbAll('items')).map(normalizeItem).sort((a, b) => b.createdAt - a.createdAt);
     } catch (e) {
       libItems = [];
       libList.innerHTML = '';
@@ -770,15 +1076,6 @@
     renderLibrary();
   }
 
-  function itemStatus(item, job) {
-    if (job) return { text: (job.label || 'Downloading') + ' ' + job.done + ' / ' + job.total + '…', ready: false };
-    if (item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal) {
-      return { text: 'Offline ready · ' + formatBytes(item.offlineBytes || 0), ready: true };
-    }
-    if (item.offlineCount > 0) return { text: 'Partly downloaded · ' + item.offlineCount + ' / ' + item.offlineTotal, ready: false };
-    return { text: 'Not downloaded', ready: false };
-  }
-
   function actionButton(label, cls, onClick, disabled) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -788,6 +1085,8 @@
     b.addEventListener('click', onClick);
     return b;
   }
+
+  function jobText(job) { return (job.label || 'Downloading') + ' ' + job.done + ' / ' + job.total + '…'; }
 
   function renderLibrary() {
     if (!libList) return;
@@ -799,9 +1098,10 @@
       libList.appendChild(empty);
       return;
     }
+    const sel = voiceSelect.value;
+    const selEng = sel ? engineOf(sel) : null;
     libItems.forEach((item) => {
       const job = activeJob(item.id);
-      const status = itemStatus(item, job);
       const row = document.createElement('div');
       row.className = 'lib-item';
       row.dataset.id = item.id;
@@ -815,11 +1115,26 @@
       meta.className = 'lib-meta';
       const words = document.createElement('span');
       words.textContent = (item.words || 0).toLocaleString() + ' words';
-      const badge = document.createElement('span');
-      badge.className = 'badge' + (status.ready ? ' ready' : '');
-      badge.textContent = status.text;
-      badge.dataset.role = 'status';
-      meta.append(words, badge);
+      meta.appendChild(words);
+      if (job) {
+        const b = document.createElement('span');
+        b.className = 'badge'; b.dataset.role = 'status'; b.textContent = jobText(job);
+        meta.appendChild(b);
+      } else {
+        const voices = Object.keys(item.downloads).filter((v) => item.downloads[v].count > 0);
+        if (!voices.length) {
+          const b = document.createElement('span');
+          b.className = 'badge'; b.textContent = 'No audio downloaded';
+          meta.appendChild(b);
+        }
+        voices.forEach((v) => {
+          const d = item.downloads[v];
+          const b = document.createElement('span');
+          b.className = 'badge' + (isFull(d) ? ' ready' : '');
+          b.textContent = isFull(d) ? voiceShort(v) + ' · offline ready · ' + formatBytes(d.bytes || 0) : voiceShort(v) + ' · partly downloaded · ' + d.count + ' / ' + d.total;
+          meta.appendChild(b);
+        });
+      }
       row.appendChild(meta);
 
       if (job) {
@@ -838,14 +1153,16 @@
       if (job) {
         actions.appendChild(actionButton(job.label === 'Making MP3' ? 'Cancel' : 'Cancel download', '', () => { job.cancel = true; }));
       } else {
-        const full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
-        actions.appendChild(actionButton('Save as MP3', '', () => exportItem(item), !full && !navigator.onLine));
-        if (!full) {
-          const label = item.offlineCount > 0 ? 'Resume download' : 'Download for offline';
-          actions.appendChild(actionButton(label, '', () => startDownload(item), !navigator.onLine));
-        } else {
-          actions.appendChild(actionButton('Remove download', '', () => removeDownload(item)));
+        const d = sel ? dlOf(item, sel) : { count: 0, total: 0 };
+        const canGenerate = sel && navigator.onLine && !engineBlocked(selEng);
+        if (sel && isFull(d)) {
+          actions.appendChild(actionButton('Remove ' + voiceShort(sel) + ' audio', '', () => removeDownload(item, sel)));
+        } else if (sel) {
+          const label = (d.count > 0 ? 'Resume ' : 'Download in ') + (d.count > 0 ? voiceShort(sel) + ' download' : voiceShort(sel) + ' voice');
+          actions.appendChild(actionButton(label, '', () => startDownload(item, sel), !canGenerate));
         }
+        const hasAny = Object.keys(item.downloads).some((v) => isFull(item.downloads[v]));
+        actions.appendChild(actionButton('Save as MP3', '', () => exportItem(item), !hasAny && !canGenerate));
         actions.appendChild(actionButton('Delete', 'danger', () => deleteItem(item)));
       }
       row.appendChild(actions);
@@ -859,17 +1176,17 @@
     if (!row || !job) return;
     const badge = row.querySelector('[data-role="status"]');
     const bar = row.querySelector('[data-role="bar"]');
-    if (badge) badge.textContent = (job.label || 'Downloading') + ' ' + job.done + ' / ' + job.total + '…';
+    if (badge) badge.textContent = jobText(job);
     if (bar) bar.style.width = Math.round((job.done / Math.max(1, job.total)) * 100) + '%';
   }
 
   async function saveCurrent() {
-    const text = storyInput.value.trim();
+    const text = getText().trim();
     if (!text) { note('Nothing to save yet — paste some text or add a file first.', true); return; }
     const dupe = libItems.find((it) => it.text === text);
     if (dupe) { note('Already saved as “' + dupe.title + '”.'); return; }
     const title = (currentTitle || text.replace(/\s+/g, ' ').slice(0, 48)).trim();
-    const item = { title, text, words: wordsIn(text), createdAt: Date.now(), offlineVoice: null, offlineCount: 0, offlineTotal: 0, offlineBytes: 0 };
+    const item = { title, text, words: wordsIn(text), createdAt: Date.now(), downloads: {} };
     try {
       item.id = await idbPut('items', item);
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -878,30 +1195,33 @@
       return;
     }
     libItems.unshift(item);
+    currentItemId = item.id;
     renderLibrary();
-    note('Saved “' + title + '”. Tap “Download for offline” below to make it play with no internet.');
+    note('Saved “' + title + '”. Pick a voice, then tap “Download in …” below to make it play with no internet.');
   }
   saveBtn.addEventListener('click', saveCurrent);
 
   function openItem(item, play) {
     if (playing) setIdleUI();
     setStoryText(item.text, item.title);
-    if (item.offlineVoice && [...voiceSelect.options].some((o) => o.value === item.offlineVoice)) {
-      voiceSelect.value = item.offlineVoice;
-      safeSet('narrator.voice', item.offlineVoice);
-    }
+    currentItemId = item.id;
     note('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (play) startPlaying();
   }
 
-  async function startDownload(item) {
-    if (downloads.has(item.id)) return;
+  async function startDownload(item, voice) {
+    voice = voice || voiceSelect.value;
+    if (downloads.has(item.id) || !voice) return;
+    const eng = engineOf(voice);
     if (!navigator.onLine) { note('Connect to the internet to download audio.', true); return; }
-    const voice = voiceSelect.value;
+    if (!(await ensureEngine(eng))) {
+      note(voiceShort(voice) + ' can\'t be reached right now, so its audio can\'t be downloaded. Try again later, or pick another voice.', true);
+      return;
+    }
     const cs = buildChunks(item.text);
     if (!cs.length) return;
-    const job = { cancel: false, done: 0, ok: 0, failed: 0, total: cs.length, bytes: 0 };
+    const job = { cancel: false, done: 0, ok: 0, failed: 0, streak: 0, total: cs.length, bytes: 0 };
     downloads.set(item.id, job);
     renderLibrary();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -909,7 +1229,7 @@
     try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
     let next = 0;
     const worker = async () => {
-      while (!job.cancel) {
+      while (!job.cancel && job.streak < 8) {
         const k = next++;
         if (k >= cs.length) return;
         const key = audioKey(voice, cs[k].text);
@@ -917,59 +1237,56 @@
           const existing = await idbGet('audio', key);
           if (existing && existing.blob) {
             job.bytes += existing.size || existing.blob.size || 0;
-            job.ok++;
+            job.ok++; job.streak = 0;
           } else {
             let blob = null;
             for (let attempt = 0; attempt < 3 && !blob && !job.cancel; attempt++) {
-              try { blob = await fetchBlobFromServer(cs[k].text, voice); } catch (e) { await sleep(900 * (attempt + 1)); }
+              try { blob = await fetchBlobFromEngine(eng, cs[k].text, voice); } catch (e) { if (e.status === 503) break; await sleep(700 * (attempt + 1)); }
             }
             if (blob) {
               await idbPut('audio', { blob, size: blob.size }, key);
               job.bytes += blob.size;
-              job.ok++;
+              job.ok++; job.streak = 0;
             } else if (!job.cancel) {
-              job.failed++;
+              job.failed++; job.streak++;
             }
           }
         } catch (e) {
-          job.failed++;
+          job.failed++; job.streak++;
         }
         job.done++;
         updateDownloadUI(item.id);
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all(Array.from({ length: eng.workers }, worker));
     if (wake) wake.release().catch(() => {});
     downloads.delete(item.id);
-    item.offlineVoice = voice;
-    item.offlineTotal = cs.length;
-    item.offlineCount = job.ok;
-    item.offlineBytes = job.bytes;
+    item.downloads[voice] = { count: job.ok, total: cs.length, bytes: job.bytes };
     try { await idbPut('items', item); } catch (e) {}
+    if (job.streak >= 8) markEngineFailure(eng, { status: 503 });
     renderLibrary();
-    if (job.cancel) note('Download paused — tap “Resume download” any time.');
-    else if (job.failed) note(job.failed + ' line(s) couldn\'t be downloaded. Tap “Resume download” to try again.', true);
-    else note('“' + item.title + '” is ready to play with no internet.');
+    if (job.cancel) note('Download paused — tap “Resume” any time.');
+    else if (job.streak >= 8) note('The voice service stopped answering, so the download paused with ' + job.ok + ' of ' + cs.length + ' lines saved. Try again later.', true);
+    else if (job.failed) note(job.failed + ' line(s) couldn\'t be downloaded. Tap “Resume” to try again.', true);
+    else note('“' + item.title + '” is ready to play with no internet in the ' + voiceShort(voice) + ' voice.');
   }
 
-  async function removeDownload(item) {
-    const voice = item.offlineVoice;
-    if (voice) {
-      for (const c of buildChunks(item.text)) {
-        try { await idbDel('audio', audioKey(voice, c.text)); } catch (e) {}
-      }
+  async function removeDownload(item, voice) {
+    for (const c of buildChunks(item.text)) {
+      try { await idbDel('audio', audioKey(voice, c.text)); } catch (e) {}
     }
-    item.offlineCount = 0; item.offlineTotal = 0; item.offlineBytes = 0; item.offlineVoice = null;
+    delete item.downloads[voice];
     try { await idbPut('items', item); } catch (e) {}
     renderLibrary();
-    note('Removed the downloaded audio for “' + item.title + '”.');
+    note('Removed the ' + voiceShort(voice) + ' audio for “' + item.title + '”.');
   }
 
   async function deleteItem(item) {
-    if (!window.confirm('Delete “' + item.title + '” and its downloaded audio from this device?')) return;
-    await removeDownload(item);
+    if (!window.confirm('Delete “' + item.title + '” and all its downloaded audio from this device?')) return;
+    for (const v of Object.keys(item.downloads)) await removeDownload(item, v);
     try { await idbDel('items', item.id); } catch (e) {}
     libItems = libItems.filter((it) => it.id !== item.id);
+    if (currentItemId === item.id) currentItemId = null;
     renderLibrary();
     note('Deleted “' + item.title + '”.');
   }
@@ -1037,11 +1354,6 @@
     return new Blob(out, { type: 'audio/mpeg' });
   }
 
-  function voiceName(voiceId) {
-    const opt = [...voiceSelect.options].find((o) => o.value === voiceId);
-    return opt ? opt.textContent.split(' — ')[0] : voiceId;
-  }
-
   function safeFilename(s) {
     return (s || 'Narration').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Narration';
   }
@@ -1059,14 +1371,17 @@
 
   async function exportItem(item) {
     if (activeJob(item.id)) return;
-    let full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
-    if (!full) {
+    const sel = voiceSelect.value;
+    let voice = null;
+    if (sel && isFull(dlOf(item, sel))) voice = sel;
+    else voice = Object.keys(item.downloads).find((v) => isFull(item.downloads[v])) || null;
+    if (!voice) {
+      if (!sel) return;
       if (!navigator.onLine) { note('Connect to the internet once to prepare the MP3.', true); return; }
-      await startDownload(item);
-      full = item.offlineTotal > 0 && item.offlineCount >= item.offlineTotal;
-      if (!full) return;
+      await startDownload(item, sel);
+      if (!isFull(dlOf(item, sel))) return;
+      voice = sel;
     }
-    const voice = item.offlineVoice;
     const cs = buildChunks(item.text);
     const job = { label: 'Making MP3', done: 0, total: cs.length, cancel: false };
     exportJobs.set(item.id, job);
@@ -1076,14 +1391,14 @@
       for (let k = 0; k < cs.length; k++) {
         if (job.cancel) { note('MP3 export cancelled.'); return; }
         const stored = await idbGet('audio', audioKey(voice, cs[k].text));
-        if (!stored || !stored.blob) throw new Error('Part of the downloaded audio is missing — tap Resume download, then try again.');
+        if (!stored || !stored.blob) throw new Error('Part of the downloaded audio is missing — tap Resume, then try again.');
         parts.push({ blob: stored.blob, para: cs[k].para });
         job.done++;
         if (k % 20 === 0) updateDownloadUI(item.id);
       }
       const blob = await assembleMp3(parts, item.title);
-      triggerDownload(blob, safeFilename(item.title) + ' (' + voiceName(voice) + ').mp3');
-      note('Saved “' + item.title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceName(voice) + ' voice). Check your Downloads.');
+      triggerDownload(blob, safeFilename(item.title) + ' (' + voiceShort(voice) + ').mp3');
+      note('Saved “' + item.title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceShort(voice) + ' voice). Check your Downloads.');
     } catch (e) {
       note(e && e.message ? e.message : 'Couldn\'t build the MP3.', true);
     } finally {
@@ -1095,12 +1410,14 @@
   let exportingCurrent = null;
   async function exportCurrentMp3() {
     if (exportingCurrent) { exportingCurrent.cancel = true; return; }
-    const text = storyInput.value.trim();
+    const text = getText().trim();
     if (!text) { note('Nothing to export yet — paste some text or add a file first.', true); return; }
     const saved = libItems.find((it) => it.text === text);
     if (saved) { exportItem(saved); return; }
-    if (!navigator.onLine) { note('Exporting new text needs an internet connection. Save it first and download its audio, or reconnect.', true); return; }
     const voice = voiceSelect.value;
+    const eng = engineOf(voice);
+    if (!navigator.onLine) { note('Exporting new text needs an internet connection. Save it first and download its audio, or reconnect.', true); return; }
+    if (!(await ensureEngine(eng))) { note(voiceShort(voice) + ' can\'t be reached right now, so an MP3 can\'t be made. Try again later, or pick another voice.', true); return; }
     const cs = buildChunks(text);
     if (!cs.length) { note('There\'s nothing readable in this text.', true); return; }
     const job = { cancel: false, failed: false };
@@ -1117,7 +1434,7 @@
         if (k >= cs.length) return;
         let blob = null;
         for (let attempt = 0; attempt < 3 && !blob && !job.cancel; attempt++) {
-          try { blob = await fetchBlobFromServer(cs[k].text, voice); } catch (e) { await sleep(900 * (attempt + 1)); }
+          try { blob = await fetchBlobFromEngine(eng, cs[k].text, voice); } catch (e) { if (e.status === 503) break; await sleep(700 * (attempt + 1)); }
         }
         if (!blob) { if (!job.cancel) job.failed = true; return; }
         results[k] = { blob, para: cs[k].para };
@@ -1125,7 +1442,7 @@
         note('Making MP3… ' + done + ' / ' + cs.length + ' lines');
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all(Array.from({ length: eng.workers }, worker));
     if (wake) wake.release().catch(() => {});
     exportingCurrent = null;
     exportBtn.textContent = 'Export MP3';
@@ -1133,21 +1450,42 @@
     if (job.failed) { note('A line couldn\'t be generated, so the MP3 wasn\'t created. Check your connection and try again.', true); return; }
     const title = currentTitle || text.replace(/\s+/g, ' ').slice(0, 48);
     const blob = await assembleMp3(results, title);
-    triggerDownload(blob, safeFilename(title) + ' (' + voiceName(voice) + ').mp3');
-    note('Saved “' + title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceName(voice) + ' voice). Check your Downloads.');
+    triggerDownload(blob, safeFilename(title) + ' (' + voiceShort(voice) + ').mp3');
+    note('Saved “' + title + '” as an MP3 (' + formatBytes(blob.size) + ', ' + voiceShort(voice) + ' voice). Check your Downloads.');
   }
   exportBtn.addEventListener('click', exportCurrentMp3);
 
   /* ---------- start ---------- */
+  try { if (/[?&](fresh|kokoro)=/.test(location.search)) history.replaceState(null, '', location.pathname); } catch (e) {}
   updateMeta();
   loadVoices();
   updateOnlineUI();
   refreshLibrary();
-  fetch('/api/health').catch(() => {});
+  ENGINES.forEach((e) => checkHealth(e));
+  setInterval(() => {
+    if (document.hidden) return;
+    ENGINES.forEach((e) => { if (e.state === 'down' && navigator.onLine && Date.now() >= e.retryAt && !e.checking) checkHealth(e); });
+  }, 20000);
 
+  const BUILD_ID = '__BUILD__';
+  async function checkForUpdate() {
+    if (!/^[0-9a-f]{10}$/.test(BUILD_ID) || !navigator.onLine) return;
+    try {
+      const res = await fetch('/api/version', { cache: 'no-store' });
+      const j = await res.json();
+      if (j && j.build && j.build !== BUILD_ID) updateChip.hidden = false;
+    } catch (e) {}
+  }
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.addEventListener('message', (ev) => {
+      if (ev.data && ev.data.type === 'update-ready') checkForUpdate();
+    });
   }
+  checkForUpdate();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+  setInterval(checkForUpdate, 600000);
+  updateChip.addEventListener('click', () => { location.href = '/?fresh=' + Date.now(); });
 </script>
 </body>
 </html>
