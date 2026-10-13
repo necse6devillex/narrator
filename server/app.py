@@ -226,16 +226,8 @@ def version():
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(test: str = ""):
-    if test == "voice":
-        return voice_test()
-    html = (WEB_DIR / "index.html").read_text(encoding="utf-8").replace("__BUILD__", build_id())
-    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
-
-
-@app.get("/voice-test", response_class=HTMLResponse)
-def voice_test():
-    html = (WEB_DIR / "voice-test.html").read_text(encoding="utf-8")
+def index():
+    html = (WEB_DIR / "index.html").read_text(encoding="utf-8").replace("__BUILD__", build_id()).replace("__LOCAL_KOKORO__", "0")
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 

@@ -183,7 +183,6 @@
     </div>
     <h1>Narrator</h1>
     <p class="sub">Paste text or add a PDF, EPUB or Word file, then press play. Save a story to this device and download its audio to listen with no internet at all.</p>
-    <a class="update-chip" href="/?fresh=1&amp;test=voice" style="text-decoration:none">New: test the natural voice on this device →</a>
     <button class="update-chip" id="updateChip" type="button" hidden>A new version is ready — tap to reload</button>
   </header>
 
@@ -200,7 +199,7 @@
       </span>
     </div>
   </div>
-  <input type="file" id="fileInput" hidden accept=".pdf,.epub,.docx,.html,.htm,.txt,.md,.markdown,text/plain">
+  <input type="file" id="fileInput" hidden accept=".pdf,.epub,.docx,.html,.htm,.txt,.md,.markdown,.narrator,text/plain,application/octet-stream">
   <p class="note" id="fileNote" hidden></p>
 
   <section class="library" aria-labelledby="libTitle">
@@ -267,7 +266,24 @@
 
   /* Second voice server (natural Kokoro voices). Set once it exists; ?kokoro=https://… also works for testing. */
   const DEFAULT_KOKORO_BASE = '';
+  /* "1" when this page is served by the Heart voice maker running on the PC. */
+  const LOCAL_FLAG = '__LOCAL_KOKORO__';
+  const LOCAL_MODE = LOCAL_FLAG === '1';
 
+  const KOKORO_FALLBACK_VOICES = [
+    { id: 'k_af_heart', label: 'Heart — female, warm (US)' },
+    { id: 'k_af_bella', label: 'Bella — female, expressive (US)' },
+    { id: 'k_af_nicole', label: 'Nicole — female, soft (US)' },
+    { id: 'k_af_aoede', label: 'Aoede — female, bright (US)' },
+    { id: 'k_af_kore', label: 'Kore — female, clear (US)' },
+    { id: 'k_af_sarah', label: 'Sarah — female, calm (US)' },
+    { id: 'k_bf_emma', label: 'Emma — female (UK)' },
+    { id: 'k_am_michael', label: 'Michael — male, clear (US)' },
+    { id: 'k_am_fenrir', label: 'Fenrir — male, deep (US)' },
+    { id: 'k_am_puck', label: 'Puck — male, lively (US)' },
+    { id: 'k_bm_george', label: 'George — male (UK)' },
+    { id: 'k_bm_fable', label: 'Fable — male, storyteller (UK)' },
+  ];
   const MS_FALLBACK_VOICES = [
     { id: 'AriaNeural', label: 'Aria — female, expressive (US)' },
     { id: 'JennyNeural', label: 'Jenny — female, warm (US)' },
@@ -366,16 +382,16 @@
   const idbAll = (s) => tx(s, 'readonly', (st) => st.getAll());
 
   /* ---------- voice servers ("engines") ---------- */
+  /* base === null means "no server here": the voice only plays audio that was saved on this device. */
   const ENGINES = [];
   (function setupEngines() {
     let kokoro = '';
     try { kokoro = new URLSearchParams(location.search).get('kokoro') || ''; } catch (e) {}
     if (kokoro) safeSet('narrator.kokoroBase', kokoro);
     kokoro = kokoro || safeGet('narrator.kokoroBase') || DEFAULT_KOKORO_BASE;
-    if (kokoro) {
-      ENGINES.push({ key: 'kokoro', base: kokoro.replace(/\/+$/, ''), prefix: 'k_', group: 'Natural voices (Kokoro)', prefetch: 3, workers: 2, speakTimeout: 90000, healthTimeout: 90000 });
-    }
-    ENGINES.push({ key: 'ms', base: '', prefix: '', group: 'Online voices (Microsoft)', prefetch: 3, workers: 3, speakTimeout: 40000, healthTimeout: 70000 });
+    const kokoroEngine = { key: 'kokoro', base: LOCAL_MODE ? '' : (kokoro ? kokoro.replace(/\/+$/, '') : null), prefix: 'k_', group: 'Natural voices (Kokoro)', prefetch: 3, workers: LOCAL_MODE ? 3 : 2, speakTimeout: 90000, healthTimeout: 90000 };
+    const msEngine = { key: 'ms', base: LOCAL_MODE ? null : '', prefix: '', group: 'Online voices (Microsoft)', prefetch: 3, workers: 3, speakTimeout: 40000, healthTimeout: 70000 };
+    if (kokoroEngine.base !== null) ENGINES.push(kokoroEngine, msEngine); else ENGINES.push(msEngine, kokoroEngine);
     ENGINES.forEach((e) => { e.state = 'unknown'; e.retryAt = 0; e.fails = 0; e.reason = ''; e.checking = null; e.voices = []; });
   })();
   const msEngine = ENGINES.find((e) => e.key === 'ms');
@@ -391,6 +407,7 @@
 
   async function checkHealth(eng) {
     if (eng.checking) return eng.checking;
+    if (eng.base === null) { eng.state = 'down'; eng.reason = 'savedonly'; eng.retryAt = Infinity; updateVoiceHint(); return; }
     if (!navigator.onLine) { eng.state = 'down'; eng.retryAt = Date.now() + 5000; eng.reason = 'offline'; updateVoiceHint(); return; }
     eng.state = eng.state === 'ok' ? 'ok' : 'checking';
     updateVoiceHint();
@@ -474,7 +491,7 @@
     ENGINES.forEach((eng) => {
       if (!eng.voices.length) return;
       const g = document.createElement('optgroup');
-      g.label = eng.group;
+      g.label = eng.group + (eng.base === null ? ' — plays saved audio only' : '');
       eng.voices.forEach((v) => {
         const opt = document.createElement('option');
         opt.value = v.id;
@@ -494,9 +511,12 @@
       try { cached = JSON.parse(safeGet('narrator.voices.' + eng.key) || 'null'); } catch (e) {}
       if (Array.isArray(cached) && cached.length) eng.voices = cached;
       else if (eng.key === 'ms') eng.voices = MS_FALLBACK_VOICES.slice();
+      else if (eng.key === 'kokoro') eng.voices = KOKORO_FALLBACK_VOICES.slice();
+      if (LOCAL_MODE && eng.key === 'ms') eng.voices = [];
     });
     populateVoices();
     ENGINES.forEach(async (eng) => {
+      if (eng.base === null) return;
       try {
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 20000);
@@ -522,7 +542,9 @@
       msg = substitution.text; warn = true;
     } else if (sel) {
       const eng = engineOf(sel);
-      if (eng.state === 'down' && navigator.onLine) {
+      if (eng.reason === 'savedonly') {
+        msg = voiceShort(sel) + ' plays audio saved on this device. To make new audio in this voice, use the voice maker on your PC and bring the result here with “Add file”.';
+      } else if (eng.state === 'down' && navigator.onLine) {
         warn = true; showCheck = true;
         msg = voiceShort(sel) + ' can\'t be used right now (' + (WHY[eng.reason] || WHY.unreachable) + '). Saved audio and your device\'s voice still work.';
       }
@@ -1031,6 +1053,17 @@
 
   /* ---------- files ---------- */
   async function loadFile(file) {
+    if (/\.narrator$/i.test(file.name)) {
+      if (playing) setIdleUI();
+      note('Importing “' + file.name + '”…');
+      try {
+        const r = await importPack(file);
+        note('Imported “' + r.item.title + '” in the ' + voiceShort(r.voice) + ' voice — ' + r.count.toLocaleString() + ' of ' + r.total.toLocaleString() + ' lines ready to play with no internet. Find it under “Saved on this device” and tap Read.');
+      } catch (e) {
+        note(e && e.message ? e.message : 'Could not import that pack.', true);
+      }
+      return;
+    }
     if (typeof extractTextFromFile !== 'function') {
       note('The file reader isn\'t loaded yet — reload the page once while online.', true);
       return;
@@ -1178,6 +1211,7 @@
         }
         const hasAny = Object.keys(item.downloads).some((v) => isFull(item.downloads[v]));
         actions.appendChild(actionButton('Save as MP3', '', () => exportItem(item), !hasAny && !canGenerate));
+        if (hasAny) actions.appendChild(actionButton('Save pack', '', () => exportPack(item)));
         actions.appendChild(actionButton('Delete', 'danger', () => deleteItem(item)));
       }
       row.appendChild(actions);
@@ -1470,6 +1504,67 @@
   }
   exportBtn.addEventListener('click', exportCurrentMp3);
 
+  /* ---------- packs: move finished audio from one device to another ---------- */
+  const PACK_MAGIC = 'NARRPK01';
+
+  async function exportPack(item) {
+    if (activeJob(item.id)) return;
+    const sel = voiceSelect.value;
+    const voice = (sel && isFull(dlOf(item, sel))) ? sel : (Object.keys(item.downloads).find((v) => isFull(item.downloads[v])) || null);
+    if (!voice) { note('Download this story\'s audio first (pick a voice, then tap “Download in …”).', true); return; }
+    note('Preparing the pack…');
+    const cs = buildChunks(item.text);
+    const seen = new Set();
+    const entries = [];
+    const parts = [];
+    for (const c of cs) {
+      const key = audioKey(voice, c.text);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const stored = await idbGet('audio', key);
+      if (!stored || !stored.blob) { note('Part of the downloaded audio is missing — tap Resume, then try again.', true); return; }
+      entries.push({ k: key, n: stored.blob.size });
+      parts.push(stored.blob);
+    }
+    const header = new TextEncoder().encode(JSON.stringify({ v: 1, title: item.title, text: item.text, words: item.words, voice, entries }));
+    const lenBuf = new ArrayBuffer(4);
+    new DataView(lenBuf).setUint32(0, header.length, true);
+    const blob = new Blob([PACK_MAGIC, lenBuf, header, ...parts], { type: 'application/octet-stream' });
+    triggerDownload(blob, safeFilename(item.title) + ' (' + voiceShort(voice) + ').narrator');
+    note('Saved a pack of “' + item.title + '” (' + formatBytes(blob.size) + ', ' + voiceShort(voice) + ' voice). On your other device, tap “Add file” and choose it.');
+  }
+
+  async function importPack(file) {
+    const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    if (new TextDecoder().decode(head.subarray(0, 8)) !== PACK_MAGIC) throw new Error('That file isn\'t a Narrator pack.');
+    const hl = new DataView(head.buffer, head.byteOffset + 8, 4).getUint32(0, true);
+    const hdr = JSON.parse(await file.slice(12, 12 + hl).text());
+    if (!hdr || !hdr.text || !hdr.voice || !Array.isArray(hdr.entries)) throw new Error('This pack looks damaged.');
+    const total = hdr.entries.reduce((n, e) => n + e.n, 0);
+    if (12 + hl + total > file.size) throw new Error('This pack is incomplete — copy the whole file and try again.');
+    let item = libItems.find((it) => it.text === hdr.text);
+    if (!item) {
+      item = { title: hdr.title || 'Imported story', text: hdr.text, words: hdr.words || wordsIn(hdr.text), createdAt: Date.now(), downloads: {} };
+      item.id = await idbPut('items', item);
+      libItems.unshift(item);
+    }
+    let off = 12 + hl, done = 0, bytes = 0;
+    const have = new Set();
+    for (const e of hdr.entries) {
+      const blob = file.slice(off, off + e.n, 'audio/mpeg');
+      off += e.n;
+      await idbPut('audio', { blob, size: e.n }, e.k);
+      have.add(e.k); bytes += e.n; done++;
+      if (done % 40 === 0) note('Importing “' + item.title + '” — ' + done + ' of ' + hdr.entries.length + '…');
+    }
+    const cs = buildChunks(item.text);
+    const count = cs.filter((c) => have.has(audioKey(hdr.voice, c.text))).length;
+    item.downloads[hdr.voice] = { count, total: cs.length, bytes };
+    await idbPut('items', item);
+    renderLibrary();
+    return { item, voice: hdr.voice, count, total: cs.length };
+  }
+
   /* ---------- start ---------- */
   try { if (/[?&](fresh|kokoro)=/.test(location.search)) history.replaceState(null, '', location.pathname); } catch (e) {}
   updateMeta();
@@ -1491,7 +1586,12 @@
       if (j && j.build && j.build !== BUILD_ID) updateChip.hidden = false;
     } catch (e) {}
   }
-  if ('serviceWorker' in navigator) {
+  if (LOCAL_MODE) {
+    const eb = document.querySelector('.eyebrow');
+    if (eb) eb.textContent = 'Voice maker · this PC';
+    document.title = 'Narrator — voice maker (this PC)';
+  }
+  if ('serviceWorker' in navigator && !LOCAL_MODE) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
     navigator.serviceWorker.addEventListener('message', (ev) => {
       if (ev.data && ev.data.type === 'update-ready') checkForUpdate();
