@@ -77,7 +77,7 @@ self.addEventListener('fetch', (event) => {
       return;
     }
     if (request.mode === 'navigate') {
-      event.respondWith(openFromCache(request, '/'));
+      if (url.pathname === '/') event.respondWith(openFromCache(request, '/'));
       return;
     }
     if (PAGE_KEYS.has(url.pathname)) {

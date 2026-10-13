@@ -231,6 +231,12 @@ def index():
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 
+@app.get("/voice-test", response_class=HTMLResponse)
+def voice_test():
+    html = (WEB_DIR / "voice-test.html").read_text(encoding="utf-8")
+    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(WEB_DIR / "manifest.json", media_type="application/manifest+json")
