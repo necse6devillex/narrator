@@ -226,7 +226,9 @@ def version():
 
 
 @app.get("/", response_class=HTMLResponse)
-def index():
+def index(test: str = ""):
+    if test == "voice":
+        return voice_test()
     html = (WEB_DIR / "index.html").read_text(encoding="utf-8").replace("__BUILD__", build_id())
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
