@@ -562,8 +562,10 @@
 
   function setSubstitution(src) {
     let next = null;
-    if (src.kind === 'device') next = { text: 'Reading with your device\'s own voice because ' + voiceShort(voiceSelect.value) + ' isn\'t available right now.' };
-    else if (src.voice && src.voice !== voiceSelect.value) next = { text: 'Playing ' + voiceShort(src.voice) + ' instead — ' + voiceShort(voiceSelect.value) + ' isn\'t available right now.' };
+    const savedOnly = ENGINES.some(e => e.state === 'down' && e.reason === 'savedonly' && voiceSelect.value.startsWith(e.prefix));
+    const why = savedOnly ? ' isn\'t made for this story yet — make it on your PC, then use “Add file”.' : ' isn\'t available right now.';
+    if (src.kind === 'device') next = { text: 'Reading with your device\'s own voice because ' + voiceShort(voiceSelect.value) + why };
+    else if (src.voice && src.voice !== voiceSelect.value) next = { text: 'Playing ' + voiceShort(src.voice) + ' instead — ' + voiceShort(voiceSelect.value) + why };
     if ((next && next.text) !== (substitution && substitution.text)) { substitution = next; updateVoiceHint(); }
   }
 
