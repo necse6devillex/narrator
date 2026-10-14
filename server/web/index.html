@@ -286,11 +286,6 @@
   ];
   const MS_FALLBACK_VOICES = [
     { id: 'AriaNeural', label: 'Aria — female, expressive (US)' },
-    { id: 'JennyNeural', label: 'Jenny — female, warm (US)' },
-    { id: 'GuyNeural', label: 'Guy — male, clear (US)' },
-    { id: 'SoniaNeural', label: 'Sonia — female (UK)' },
-    { id: 'RyanNeural', label: 'Ryan — male (UK)' },
-    { id: 'NatashaNeural', label: 'Natasha — female (Australia)' },
   ];
   const LONG_CHARS = 60000;
   const FULL_RENDER_CHUNKS = 900;
@@ -488,8 +483,11 @@
   function populateVoices() {
     const keep = voiceSelect.value || safeGet('narrator.voice');
     voiceSelect.innerHTML = '';
+    /* Without a voice server here, a voice only appears once some saved audio exists for it (e.g. an imported pack). */
+    const hasSaved = (eng) => (typeof libItems !== 'undefined' ? libItems : []).some((it) => it.downloads && Object.keys(it.downloads).some((v) => v.startsWith(eng.prefix) && it.downloads[v] && it.downloads[v].count > 0));
     ENGINES.forEach((eng) => {
       if (!eng.voices.length) return;
+      if (eng.base === null && eng.prefix && !hasSaved(eng)) return;
       const g = document.createElement('optgroup');
       g.label = eng.group + (eng.base === null ? ' — plays saved audio only' : '');
       eng.voices.forEach((v) => {
@@ -500,8 +498,9 @@
       });
       voiceSelect.appendChild(g);
     });
-    const ids = allVoices().map((v) => v.id);
+    const ids = Array.from(voiceSelect.options).map((o) => o.value);
     if (keep && ids.includes(keep)) voiceSelect.value = keep;
+    else if (ids.length) voiceSelect.value = ids.includes('AriaNeural') ? 'AriaNeural' : ids[0];
     updateVoiceHint();
   }
 
@@ -509,6 +508,7 @@
     ENGINES.forEach((eng) => {
       let cached = null;
       try { cached = JSON.parse(safeGet('narrator.voices.' + eng.key) || 'null'); } catch (e) {}
+      if (eng.key === 'ms' && Array.isArray(cached)) cached = cached.filter((v) => v.id === 'AriaNeural');
       if (Array.isArray(cached) && cached.length) eng.voices = cached;
       else if (eng.key === 'ms') eng.voices = MS_FALLBACK_VOICES.slice();
       else if (eng.key === 'kokoro') eng.voices = KOKORO_FALLBACK_VOICES.slice();
@@ -524,7 +524,7 @@
         clearTimeout(timer);
         const list = await res.json();
         if (Array.isArray(list) && list.length) {
-          eng.voices = list.map((v) => ({ id: eng.prefix + v.id, label: v.label }));
+          eng.voices = list.filter((v) => eng.key !== 'ms' || v.id === 'AriaNeural').map((v) => ({ id: eng.prefix + v.id, label: v.label }));
           safeSet('narrator.voices.' + eng.key, JSON.stringify(eng.voices));
           populateVoices();
           renderLibrary();
@@ -1123,6 +1123,7 @@
       libList.appendChild(msg);
       return;
     }
+    populateVoices();
     renderLibrary();
   }
 
@@ -1563,6 +1564,7 @@
     const count = cs.filter((c) => have.has(audioKey(hdr.voice, c.text))).length;
     item.downloads[hdr.voice] = { count, total: cs.length, bytes };
     await idbPut('items', item);
+    populateVoices();
     renderLibrary();
     return { item, voice: hdr.voice, count, total: cs.length };
   }

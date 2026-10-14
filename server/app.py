@@ -16,11 +16,6 @@ from pydantic import BaseModel
 
 VOICES = {
     "AriaNeural": {"id": "en-US-AriaNeural", "label": "Aria — female, expressive (US)"},
-    "JennyNeural": {"id": "en-US-JennyNeural", "label": "Jenny — female, warm (US)"},
-    "GuyNeural": {"id": "en-US-GuyNeural", "label": "Guy — male, clear (US)"},
-    "SoniaNeural": {"id": "en-GB-SoniaNeural", "label": "Sonia — female (UK)"},
-    "RyanNeural": {"id": "en-GB-RyanNeural", "label": "Ryan — male (UK)"},
-    "NatashaNeural": {"id": "en-AU-NatashaNeural", "label": "Natasha — female (Australia)"},
 }
 
 CACHE_MAX = 400
